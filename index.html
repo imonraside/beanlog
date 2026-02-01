@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>BeanLog v1.7.1</title>
+  <title>BeanLog v1.7.3</title>
   <meta name="theme-color" content="#ffffff">
   <meta name="mobile-web-app-capable" content="yes">
   
@@ -14,13 +14,13 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
   
   <style>
-    /* 기본 폰트 설정 */
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; }
+    /* 기본 폰트 설정 (시스템 폰트 우선 + Noto Sans fallback) */
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans KR", sans-serif; background: #f8fafc; }
     
-    /* 폰트 로드 후 적용될 클래스 */
-    .font-loaded body { font-family: 'Noto Sans KR', sans-serif; }
-    .font-loaded .font-brand { font-family: 'Montserrat', sans-serif; }
-    .font-loaded .font-capture { font-family: 'Noto Sans KR', sans-serif; }
+    /* 캡처 시 한글 폰트 깨짐 방지용 */
+    .font-capture { font-family: 'Noto Sans KR', sans-serif; }
 
     .no-scrollbar::-webkit-scrollbar { display: none; }
     body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
@@ -33,6 +33,10 @@
     .cropper-view-box, .cropper-face { outline: 2px solid white; }
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .no-select { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+
+    /* 이미지 강제 고정 스타일 (마스킹) */
+    .img-frame { position: relative; overflow: hidden; width: 100%; height: 100%; background-color: #cbd5e1; }
+    .img-force-cover { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 100%; min-height: 100%; width: auto; height: auto; max-width: none; }
 
     /* 점선 및 로딩 애니메이션 */
     .dot-line { border-bottom: 1px dotted #cbd5e1; flex: 1; margin: 0 4px; position: relative; top: -3px; }
@@ -59,7 +63,7 @@
   
   <div id="app-loader">
     <div class="spinner"></div>
-    <p style="margin-top:15px; font-weight:bold; color:#666; font-family: sans-serif;">BeanLog v1.7.1</p>
+    <p style="margin-top:15px; font-weight:bold; color:#666; font-family: sans-serif;">BeanLog v1.7.3</p>
   </div>
 
   <div id="root" class="h-full w-full"></div>
@@ -85,7 +89,7 @@
 
     // 1. CONSTANTS
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL"; 
-    const APP_VERSION = "v1.7.1";
+    const APP_VERSION = "v1.7.3";
 
     const VIEW = { LIST: 'LIST', DETAIL: 'DETAIL', EDIT_BEAN: 'EDIT_BEAN', EDIT_TASTING: 'EDIT_TASTING', SETTINGS: 'SETTINGS' };
     const NOTE_MODE = { BEAN: 'BEAN', TASTING: 'TASTING' }; 
@@ -190,7 +194,7 @@
     // Font Loader (CORS Fix)
     const FontLoader = () => {
       useEffect(() => {
-        const fontUrl = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap';
+        const fontUrl = 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap';
         fetch(fontUrl)
           .then(res => res.text())
           .then(css => {
@@ -274,7 +278,6 @@
       );
     };
 
-    // --- [Component] AccurateRadarChart (For Share) ---
     const AccurateRadarChart = ({ scores }) => {
       const size = 100;
       const center = size / 2;
@@ -316,7 +319,7 @@
       );
     };
 
-    // --- [Component] ShareModal (v1.7.1: Image Fix with bg-image) ---
+    // --- [Component] ShareModal (v1.7.3: Shop Name Wrap Fix) ---
     const ShareModal = ({ bean, tasting, onClose }) => {
         const cardRef = useRef(null);
         const [generatedImg, setGeneratedImg] = useState(null);
@@ -354,13 +357,22 @@
             generate();
         }, []);
 
+        const handleDownload = () => {
+            if (generatedImg) {
+                const link = document.createElement('a');
+                link.download = `BeanLog_${bean.name}_${tasting.date}.jpg`;
+                link.href = generatedImg;
+                link.click();
+            }
+        };
+
         return (
             <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 animate-in fade-in">
                 
                 {/* 1. Source Card (Hidden) */}
                 <div className="fixed top-0 left-[-9999px]">
                     <div ref={cardRef} className="w-[320px] bg-white rounded-sm shadow-2xl overflow-hidden flex flex-col font-capture text-slate-800">
-                        {/* Header: Background Image Method (Fixes Zoom/Stretch Issue) */}
+                        {/* Header: Background Image Method */}
                         <div className="relative h-60 bg-slate-200">
                              {bean.mainImage ? (
                                 <div 
@@ -373,9 +385,12 @@
                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                              
                              <div className="absolute bottom-0 left-0 right-0 p-5 text-white z-10">
-                                <div className="flex items-center justify-between mb-2 opacity-100">
-                                    <span className="text-[10px] font-black bg-black/50 px-2.5 py-1 rounded border border-white/20 text-white shadow-sm font-capture">{bean.shop || "Home Cafe"}</span>
-                                    <span className="text-[10px] font-bold opacity-90 drop-shadow-md">{tasting.date}</span>
+                                <div className="flex items-center justify-between mb-2 opacity-100 gap-2">
+                                    {/* v1.7.3 Fix: 박스 제거 및 줄바꿈 방지 (whitespace-nowrap) */}
+                                    <span className="text-[10px] font-black text-white font-capture whitespace-nowrap drop-shadow-md truncate max-w-[75%]">
+                                        {bean.shop || "Home Cafe"}
+                                    </span>
+                                    <span className="text-[10px] font-bold opacity-90 drop-shadow-md whitespace-nowrap shrink-0">{tasting.date}</span>
                                 </div>
                                 <h1 className="text-lg font-black leading-snug mb-1 line-clamp-2 drop-shadow-md font-capture">{bean.name}</h1>
                                 <p className="text-xs font-bold text-amber-400 mb-3">{bean.country}</p>
@@ -383,7 +398,8 @@
                                 <div className="flex flex-wrap gap-1.5">
                                     {specs.map((s, i) => (
                                         <span key={i} className="inline-flex items-center gap-1 px-1.5 h-[18px] rounded bg-black/40 border border-white/20 text-[9px] font-medium text-slate-100">
-                                            <span className="opacity-70 flex items-center">{s.icon}</span><span className="leading-none pt-[1.5px]">{s.value}</span>
+                                            <span className="opacity-70 flex items-center">{s.icon}</span> 
+                                            <span className="leading-none pt-[1.5px]">{s.value}</span>
                                         </span>
                                     ))}
                                 </div>
@@ -463,12 +479,18 @@
                     )}
                     
                     <button onClick={onClose} className="bg-white/20 text-white px-8 py-3 rounded-full font-bold backdrop-blur-sm hover:bg-white/30 transition-colors">닫기</button>
+                    
+                    {generatedImg && (
+                         <button onClick={handleDownload} className="text-white/60 text-xs hover:text-white underline">
+                            다운로드 버튼으로 저장하기
+                         </button>
+                    )}
                 </div>
             </div>
         );
     };
 
-    // ... (ImageCropper, ScoreButton, Main App 등 기존 컴포넌트 동일) ...
+    // --- [Component] ImageCropper (MANUAL & RESIZE) ---
     const ImageCropper = ({ imageSrc, aspectRatio, onComplete, onCancel }) => {
       const imgRef = useRef(null);
       const cropperRef = useRef(null);
@@ -544,7 +566,10 @@
     const ScoreButton = ({ onClick, icon: Icon }) => {
       const longPressProps = useLongPress(onClick, 80, 400); 
       return (
-        <button {...longPressProps} className="w-8 h-8 bg-white rounded-full shadow border flex items-center justify-center active:scale-95 transition-transform no-select">
+        <button 
+          {...longPressProps}
+          className="w-8 h-8 bg-white rounded-full shadow border flex items-center justify-center active:scale-95 transition-transform no-select"
+        >
           {Icon}
         </button>
       );
@@ -553,12 +578,18 @@
     const ScoreButtonPlus = ({ onClick, icon: Icon }) => {
       const longPressProps = useLongPress(onClick, 80, 400); 
       return (
-        <button {...longPressProps} className="w-8 h-8 bg-slate-900 rounded-full shadow flex items-center justify-center active:scale-95 transition-transform no-select">
+        <button 
+          {...longPressProps}
+          className="w-8 h-8 bg-slate-900 rounded-full shadow flex items-center justify-center active:scale-95 transition-transform no-select"
+        >
           {Icon}
         </button>
       );
     };
 
+    // =================================================================================================
+    // 4. MAIN APP COMPONENT
+    // =================================================================================================
     const App = () => {
       const [beans, setBeans] = useState([]);
       const [currentView, setCurrentView] = useState(VIEW.LIST);
@@ -603,7 +634,6 @@
           if (savedNoteMode) setListNoteMode(savedNoteMode);
           const savedSortMode = safeStorage.get(`${STORAGE_KEY}_sort_mode`);
           if (savedSortMode) setSortMode(savedSortMode);
-          
           window.history.replaceState({ view: VIEW.LIST, id: null }, '');
         } catch (e) {
           console.error(e);
