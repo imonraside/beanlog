@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>BeanLog v1.7.3</title>
+  <title>BeanLog v1.7.11</title>
   <meta name="theme-color" content="#ffffff">
   <meta name="mobile-web-app-capable" content="yes">
   
@@ -14,15 +14,16 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
   
   <style>
-    /* 기본 폰트 설정 (시스템 폰트 우선 + Noto Sans fallback) */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap');
 
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans KR", sans-serif; background: #f8fafc; }
     
-    /* 캡처 시 한글 폰트 깨짐 방지용 */
+    .font-brand { font-family: 'Montserrat', sans-serif; }
     .font-capture { font-family: 'Noto Sans KR', sans-serif; }
 
     .no-scrollbar::-webkit-scrollbar { display: none; }
+    /* Safe Area 대응 */
     body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
     
     #app-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
@@ -34,11 +35,9 @@
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .no-select { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
-    /* 이미지 강제 고정 스타일 (마스킹) */
     .img-frame { position: relative; overflow: hidden; width: 100%; height: 100%; background-color: #cbd5e1; }
     .img-force-cover { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 100%; min-height: 100%; width: auto; height: auto; max-width: none; }
 
-    /* 점선 및 로딩 애니메이션 */
     .dot-line { border-bottom: 1px dotted #cbd5e1; flex: 1; margin: 0 4px; position: relative; top: -3px; }
     .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
   </style>
@@ -63,7 +62,7 @@
   
   <div id="app-loader">
     <div class="spinner"></div>
-    <p style="margin-top:15px; font-weight:bold; color:#666; font-family: sans-serif;">BeanLog v1.7.3</p>
+    <p style="margin-top:15px; font-weight:bold; color:#666; font-family: sans-serif;">BeanLog v1.7.11</p>
   </div>
 
   <div id="root" class="h-full w-full"></div>
@@ -89,7 +88,7 @@
 
     // 1. CONSTANTS
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL"; 
-    const APP_VERSION = "v1.7.3";
+    const APP_VERSION = "v1.7.11";
 
     const VIEW = { LIST: 'LIST', DETAIL: 'DETAIL', EDIT_BEAN: 'EDIT_BEAN', EDIT_TASTING: 'EDIT_TASTING', SETTINGS: 'SETTINGS' };
     const NOTE_MODE = { BEAN: 'BEAN', TASTING: 'TASTING' }; 
@@ -191,10 +190,9 @@
     const openLink = (url) => { if(!url) return; let target = url.trim(); if (!target.startsWith('http')) target = 'https://' + target; window.open(target, '_blank'); };
     
     // 3. HOOKS & UTILS
-    // Font Loader (CORS Fix)
     const FontLoader = () => {
       useEffect(() => {
-        const fontUrl = 'https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap';
+        const fontUrl = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Noto+Sans+KR:wght@400;500;700;900&display=swap';
         fetch(fontUrl)
           .then(res => res.text())
           .then(css => {
@@ -249,6 +247,34 @@
     };
 
     // 4. COMPONENTS
+    
+    const CustomBeanIcon = ({ size = 24, className = "" }) => (
+      <svg 
+        width={size} 
+        height={size} 
+        viewBox="212 184 600 600" 
+        className={className}
+        xmlns="http://www.w3.org/2000/svg"
+        version="1.1"
+        style={{ shapeRendering: "geometricPrecision", textRendering: "geometricPrecision", imageRendering: "optimizeQuality", fillRule: "evenodd", clipRule: "evenodd" }}
+      >
+        <g className="fill-current" stroke="currentColor" strokeWidth="20" strokeLinejoin="round" strokeLinecap="round">
+            <path fillOpacity="0.9" d="M 606.5,191.5 C 626.3,189.9 645.6,192.1 664.5,198C 675.1,200.9 679.6,207.8 678,218.5C 673.5,239.2 662,254.5 643.5,264.5C 641.1,262.9 641.1,261.4 643.5,260C 642.4,258.6 641.1,257.6 639.5,257C 642.3,254.8 642,253.3 638.5,252.5C 653.5,243.8 662,230.8 664,213.5C 656.9,208.9 649.1,206.4 640.5,206C 628.2,204.8 615.9,204.3 603.5,204.5C 604.3,203.6 606,203.1 608.5,203C 605.1,202.8 601.8,202.3 598.5,201.5C 599.2,198.6 600.5,196.1 602.5,194C 601.5,193.7 600.5,193.3 599.5,193C 602,192.8 604.4,192.3 606.5,191.5 Z"/>
+            <path fillOpacity="0.8" d="M 708.5,221.5 C 732.2,236 749.7,256 761,281.5C 773.9,310.9 780.4,341.8 780.5,374C 780.4,399.5 777.7,424.7 772.5,449.5C 768.5,441.6 765.5,433.2 763.5,424.5C 771.2,379 767,334.6 751,291.5C 741.7,269.9 727.9,251.9 709.5,237.5C 712.1,237.3 712.1,236.8 709.5,236C 710.8,230.9 709.5,226.6 705.5,223C 706.7,222.8 707.7,222.3 708.5,221.5 Z"/>
+            <path fillOpacity="1.0" d="M 638.5,252.5 C 642,253.3 642.3,254.8 639.5,257C 641.1,257.6 642.4,258.6 643.5,260C 641.1,261.4 641.1,262.9 643.5,264.5C 630.7,271.7 618.1,279.2 605.5,287C 591.7,296.9 579.1,308.1 567.5,320.5C 563.5,318.7 559.7,318.7 556,320.5C 554.7,319.1 554.2,317.4 554.5,315.5C 560.9,307.6 567.9,300.1 575.5,293C 594.8,276.9 615.8,263.4 638.5,252.5 Z"/>
+            <path fillOpacity="0.8" d="M 606.5,191.5 C 604.4,192.3 602,192.8 599.5,193C 600.5,193.3 601.5,193.7 602.5,194C 600.5,196.1 599.2,198.6 598.5,201.5C 601.8,202.3 605.1,202.8 608.5,203C 606,203.1 604.3,203.6 603.5,204.5C 591.2,206.3 578.8,208.8 566.5,212C 529.9,223.1 496.3,239.8 465.5,262C 411.7,302.1 368.2,351.3 335,409.5C 310.1,452.9 293.6,499.2 285.5,548.5C 284.8,551.2 284.2,553.8 283.5,556.5C 282.7,557 282,558.3 281.5,560.5C 280.7,559.6 280.2,558.6 280,557.5C 279.7,558.3 279.2,559 278.5,559.5C 276.6,559.1 275.1,558.1 274,556.5C 273.7,557.2 273.3,557.8 273,558.5C 272.8,556.3 272.3,554.3 271.5,552.5C 276.3,515 286.4,479 302,444.5C 343,354.6 405.2,283.4 488.5,231C 515.5,215.2 544.1,203.6 574.5,196C 585,193.5 595.7,192 606.5,191.5 Z"/>
+            <path fillOpacity="0.9" d="M 554.5,315.5 C 554.2,317.4 554.7,319.1 556,320.5C 559.7,318.7 563.5,318.7 567.5,320.5C 528.7,366.6 506.6,420 501,480.5C 491.1,533.4 469.1,580.4 435,621.5C 428.2,628.3 421.3,635.2 414.5,642C 407.2,648 399.5,653.5 391.5,658.5C 391.2,657 390.2,656.3 388.5,656.5C 387.7,651.4 384.7,649.4 379.5,650.5C 389.2,644.3 398.5,637.5 407.5,630C 433.2,606 453,577.8 467,545.5C 480.9,510.7 489.9,474.7 494,437.5C 504.4,391.7 524.6,351 554.5,315.5 Z"/>
+            <path d="M 763.5,424.5 C 765.5,433.2 768.5,441.6 772.5,449.5C 748.4,553.2 695.8,639 614.5,707C 576.4,737.9 533.4,759.6 485.5,772C 474.2,774.2 462.9,776 451.5,777.5C 452.6,776.7 453.9,776.2 455.5,776C 452.2,775.7 448.8,775.3 445.5,775C 443.7,772.8 441.7,770.8 439.5,769C 443.5,766.7 447.8,765.3 452.5,765C 450.2,764.5 447.9,764.3 445.5,764.5C 445.5,764.2 445.5,763.8 445.5,763.5C 461.7,762.6 477.7,760.1 493.5,756C 533.4,743.5 569.8,724.5 602.5,699C 684.1,632.5 736.4,547.7 759.5,444.5C 760.9,442.5 761.6,440.2 761.5,437.5C 761.8,433 762.4,428.6 763.5,424.5 Z"/>
+            <path d="M 271.5,552.5 C 272.3,554.3 272.8,556.3 273,558.5C 273.3,557.8 273.7,557.2 274,556.5C 275.1,558.1 276.6,559.1 278.5,559.5C 279.2,559 279.7,558.3 280,557.5C 280.2,558.6 280.7,559.6 281.5,560.5C 282,558.3 282.7,557 283.5,556.5C 283.5,559.5 283.5,562.5 283.5,565.5C 280.6,594.5 282.8,623.2 290,651.5C 295.9,673.2 306.4,692.2 321.5,708.5C 319.9,708.5 318.2,708.5 316.5,708.5C 314,709.7 314,710.9 316.5,712C 314,714.2 314.3,716.2 317.5,718C 316.7,719.6 317.3,720.6 319.5,721C 318.6,721.3 317.9,721.8 317.5,722.5C 298.3,704.7 285.1,683.1 278,657.5C 268.3,622.8 266.2,587.8 271.5,552.5 Z"/>
+            <path fillOpacity="1.0" d="M 708.5,221.5 C 707.7,222.3 706.7,222.8 705.5,223C 709.5,226.6 710.8,230.9 709.5,236C 712.1,236.8 712.1,237.3 709.5,237.5C 708,236.7 706.7,236.7 705.5,237.5C 699.6,253.4 690.6,267.2 678.5,279C 664.2,289.5 649.5,299.5 634.5,309C 590.3,346.8 562.2,394.3 550,451.5C 546,481.8 539.3,511.5 530,540.5C 504.3,613.9 456.4,667.4 386.5,701C 373.4,709.9 365.4,722.1 362.5,737.5C 363,741.8 365,745.3 368.5,748C 380.6,756.1 393.9,760.9 408.5,762.5C 411.3,763.3 414.3,763.8 417.5,764C 426.8,764.5 436.1,764.6 445.5,764.5C 447.9,764.3 450.1,764.5 452.5,765C 447.8,765.3 443.5,766.6 439.5,769C 441.7,770.8 443.7,772.8 445.5,775C 448.8,775.3 452.1,775.6 455.5,776C 453.9,776.2 452.6,776.7 451.5,777.5C 422.4,780.6 394.8,776.1 368.5,764C 350.4,755.3 344.9,741.4 352,722.5C 359.2,707.2 370.1,695 384.5,686C 446.4,656.0 489.5,608.9 514,544.5C 519.5,529.1 524.2,513.4 528,497.5C 531.7,473.6 536.4,449.9 542,426.5C 557.4,375.6 585.3,333.1 625.5,299C 636.6,290.5 648.3,282.9 660.5,276C 678.3,262.5 690.3,245 696.5,223.5C 700,220.3 704,219.7 708.5,221.5 Z"/>
+            <path fillOpacity="1.0" d="M 379.5,650.5 C 384.7,649.3 387.7,651.3 388.5,656.5C 390.1,656.2 391.1,656.9 391.5,658.5C 377.8,665.8 365.3,674.8 354,685.5C 343.7,697 336.2,710.2 331.5,725C 326.2,727.4 321.5,726.6 317.5,722.5C 317.9,721.7 318.5,721.2 319.5,721C 317.3,720.5 316.6,719.5 317.5,718C 314.3,716.1 313.9,714.1 316.5,712C 313.9,710.9 313.9,709.7 316.5,708.5C 318.1,708.5 319.8,708.5 321.5,708.5C 322.3,709.5 323.2,709.5 324,708.5C 335.1,682.1 353.6,662.8 379.5,650.5 Z"/>
+        </g>
+        <g fill="white" fillOpacity="0.3">
+             <path d="M 603.5,204.5 C 615.9,204.3 628.2,204.8 640.5,206C 649.1,206.4 656.9,208.9 664,213.5C 662,230.8 653.5,243.8 638.5,252.5C 615.8,263.4 594.8,276.9 575.5,293C 567.9,300.1 560.9,307.6 554.5,315.5C 524.6,351 504.4,391.7 494,437.5C 489.9,474.7 480.9,510.7 467,545.5C 453,577.8 433.2,606 407.5,630C 398.5,637.5 389.2,644.3 379.5,650.5C 353.7,662.8 335.2,682.2 324,708.5C 323.2,709.6 322.4,709.6 321.5,708.5C 306.4,692.2 295.9,673.2 290,651.5C 282.8,623.2 280.6,594.5 283.5,565.5C 284.9,560.1 285.6,554.4 285.5,548.5C 293.6,499.2 310.1,452.9 335,409.5C 368.2,351.3 411.7,302.1 465.5,262C 496.3,239.8 529.9,223.1 566.5,212C 578.8,208.8 591.2,206.3 603.5,204.5 Z"/>
+        </g>
+      </svg>
+    );
+
     const RadarChart = ({ scores }) => {
       const size = 120, center = size/2, radius = size*0.4;
       const safeScores = scores || INITIAL_TASTING.scores;
@@ -319,7 +345,6 @@
       );
     };
 
-    // --- [Component] ShareModal (v1.7.3: Shop Name Wrap Fix) ---
     const ShareModal = ({ bean, tasting, onClose }) => {
         const cardRef = useRef(null);
         const [generatedImg, setGeneratedImg] = useState(null);
@@ -341,10 +366,14 @@
                 await new Promise(r => setTimeout(r, 800));
                 if(cardRef.current) {
                     try {
-                        const url = await htmlToImage.toJpeg(cardRef.current, { 
+                        const blob = await htmlToImage.toBlob(cardRef.current, { 
                             quality: 0.95, backgroundColor: '#ffffff', skipAutoScale: true, pixelRatio: 2, filter: (n) => n.tagName !== 'LINK'
                         });
-                        setGeneratedImg(url);
+                        if (blob) {
+                            setGeneratedImg(URL.createObjectURL(blob));
+                        } else {
+                            throw new Error("Blob creation failed");
+                        }
                     } catch(e) {
                         console.error(e);
                         alert("이미지 생성 실패");
@@ -369,10 +398,8 @@
         return (
             <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 animate-in fade-in">
                 
-                {/* 1. Source Card (Hidden) */}
                 <div className="fixed top-0 left-[-9999px]">
                     <div ref={cardRef} className="w-[320px] bg-white rounded-sm shadow-2xl overflow-hidden flex flex-col font-capture text-slate-800">
-                        {/* Header: Background Image Method */}
                         <div className="relative h-60 bg-slate-200">
                              {bean.mainImage ? (
                                 <div 
@@ -380,17 +407,19 @@
                                     style={{ backgroundImage: `url(${bean.mainImage})` }}
                                 />
                              ) : (
-                                <div className="absolute inset-0 flex items-center justify-center text-slate-400"><Bean size={48}/></div>
+                                <div className="absolute inset-0 flex items-center justify-center text-slate-400"><CustomBeanIcon size={128} className="opacity-50"/></div>
                              )}
                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                              
                              <div className="absolute bottom-0 left-0 right-0 p-5 text-white z-10">
-                                <div className="flex items-center justify-between mb-2 opacity-100 gap-2">
-                                    {/* v1.7.3 Fix: 박스 제거 및 줄바꿈 방지 (whitespace-nowrap) */}
+                                <div className="flex items-center justify-between mb-2 opacity-100">
                                     <span className="text-[10px] font-black text-white font-capture whitespace-nowrap drop-shadow-md truncate max-w-[75%]">
                                         {bean.shop || "Home Cafe"}
                                     </span>
-                                    <span className="text-[10px] font-bold opacity-90 drop-shadow-md whitespace-nowrap shrink-0">{tasting.date}</span>
+                                    <div className="flex flex-col items-end drop-shadow-md">
+                                        {bean.roastingDate && <span className="text-[8px] font-medium opacity-90 mb-0.5">Roast: {bean.roastingDate}</span>}
+                                        <span className="text-[10px] font-bold opacity-100">Taste: {tasting.date}</span>
+                                    </div>
                                 </div>
                                 <h1 className="text-lg font-black leading-snug mb-1 line-clamp-2 drop-shadow-md font-capture">{bean.name}</h1>
                                 <p className="text-xs font-bold text-amber-400 mb-3">{bean.country}</p>
@@ -406,45 +435,52 @@
                              </div>
                         </div>
 
-                        {/* Body */}
                         <div className="p-5 flex flex-col gap-4 bg-white">
-                            <div className="grid grid-cols-1 gap-2.5">
+                            <div className="grid grid-cols-1 gap-3">
                                 {beanTags.length > 0 && (
-                                    <div className="flex items-start gap-2.5">
-                                        <span className="h-[22px] flex items-center justify-center text-[9px] font-black text-amber-700 bg-amber-50 px-2 rounded border border-amber-100 w-16 shrink-0 pt-[1px] gap-0.5"><Bean size={10} /> BEAN</span>
-                                        <div className="flex flex-wrap gap-1.5" style={{ wordBreak: 'keep-all' }}>
-                                            {beanTags.map((t,i)=><span key={i} className="h-[22px] flex items-center text-[10px] text-slate-600 border border-slate-200 px-2 rounded bg-white"><span className="pt-[1px] leading-none">{t}</span></span>)}
-                                        </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="h-[20px] flex items-center justify-center text-[9px] font-black text-amber-700 bg-amber-50 px-2 rounded border border-amber-100 w-14 shrink-0 pt-[1px] gap-1">
+                                            <CustomBeanIcon size={10} /> BEAN
+                                        </span>
+                                        <p className="text-xs font-medium text-slate-600 leading-relaxed pt-[1px]">
+                                            {beanTags.join(', ')}
+                                        </p>
                                     </div>
                                 )}
                                 {tastingTags.length > 0 && (
-                                    <div className="flex items-start gap-2.5">
-                                        <span className="h-[22px] flex items-center justify-center text-[9px] font-black text-blue-700 bg-blue-50 px-2 rounded border border-blue-100 w-16 shrink-0 pt-[1px] gap-0.5"><Coffee size={10} /> TASTE</span>
-                                        <div className="flex flex-wrap gap-1.5" style={{ wordBreak: 'keep-all' }}>
-                                            {tastingTags.map((t,i)=><span key={i} className="h-[22px] flex items-center text-[10px] font-bold text-slate-700 bg-slate-50 px-2 rounded"><span className="pt-[1px] leading-none">{t}</span></span>)}
-                                        </div>
+                                    <div className="flex items-start gap-3">
+                                        <span className="h-[20px] flex items-center justify-center text-[9px] font-black text-blue-700 bg-blue-50 px-2 rounded border border-blue-100 w-14 shrink-0 pt-[1px] gap-1">
+                                            <Coffee size={10} /> TASTE
+                                        </span>
+                                        <p className="text-xs font-medium text-slate-600 leading-relaxed pt-[1px]">
+                                            {tastingTags.join(', ')}
+                                        </p>
                                     </div>
                                 )}
                             </div>
+
                             <div className="space-y-2 pt-2 border-t border-dashed border-slate-100">
-                                {tasting.desc && <p className="text-xs text-slate-700 font-medium leading-relaxed"><Quote size={12} className="inline text-slate-300 mr-1 -mt-1"/>{tasting.desc}</p>}
+                                {tasting.desc && (
+                                    <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                        <Quote size={12} className="inline text-slate-300 mr-1 -mt-1"/>
+                                        {tasting.desc}
+                                    </p>
+                                )}
                                 {(tasting.memo || bean.memo) && (
                                     <div className="flex gap-2 items-start">
                                         <StickyNote size={12} className="text-slate-400 shrink-0 mt-0.5"/>
-                                        <div className="text-[10px] text-slate-500 font-medium leading-snug whitespace-pre-wrap">{tasting.memo || bean.memo}</div>
+                                        <div className="text-[10px] text-slate-500 font-medium leading-snug whitespace-pre-wrap">
+                                            {tasting.memo || bean.memo}
+                                        </div>
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Score */}
                         <div className="bg-slate-50 border-t border-slate-100 p-4 px-5 flex items-center justify-between gap-3">
                             <div className="flex flex-col shrink-0 items-center justify-center">
                                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total</span>
                                 <span className="text-4xl font-black text-slate-900 tracking-tighter leading-none font-capture">{totalScore}</span>
-                                <div className="flex gap-0.5 text-amber-500 mt-1">
-                                    {[1,2,3,4,5].map(i=><Star key={i} size={8} fill={i <= Math.round(Number(totalScore)/2) ? "currentColor" : "none"} className={i <= Math.round(Number(totalScore)/2) ? "" : "text-slate-300"}/>)}
-                                </div>
                             </div>
                             <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-1 border-l border-slate-200 pl-4 py-1">
                                 {Object.entries(tasting.scores).map(([key, val]) => (
@@ -457,14 +493,12 @@
                             </div>
                             <div className="w-[70px] h-[70px] shrink-0"><AccurateRadarChart scores={tasting.scores} /></div>
                         </div>
-                        {/* Footer */}
                         <div className="bg-slate-900 text-white text-center py-2">
                              <p className="text-[8px] font-bold tracking-[0.2em] uppercase opacity-60 font-brand">Recorded with BeanLog</p>
                         </div>
                     </div>
                 </div>
 
-                {/* 2. Generated Viewer */}
                 <div className="flex flex-col items-center gap-6">
                     {isGenerating ? (
                         <div className="flex flex-col items-center text-white gap-2">
@@ -490,7 +524,6 @@
         );
     };
 
-    // --- [Component] ImageCropper (MANUAL & RESIZE) ---
     const ImageCropper = ({ imageSrc, aspectRatio, onComplete, onCancel }) => {
       const imgRef = useRef(null);
       const cropperRef = useRef(null);
@@ -641,6 +674,9 @@
       }, []);
 
       useEffect(() => {
+        // v1.7.10: Scroll reset added
+        window.scrollTo(0, 0);
+
         const handlePopState = (event) => {
           if (cropImage) { setCropImage(null); window.history.pushState({ view: currentView, id: selectedId }, ''); return; }
           if (shareData) { setShareData(null); window.history.pushState({ view: currentView, id: selectedId }, ''); return; }
@@ -685,7 +721,7 @@
         setIsProcessing(true);
         try {
           const base64Data = tempOcrImage.split(',')[1];
-          const promptText = `Extract coffee bean info. Return ONLY JSON. Keys: - name, country, region, variety, processing, roastingLevel, producer, shop (Value in ENGLISH) - roastingDate(YYYY-MM-DD), purchaseUrl, price, weight - notes, flavorDesc (Translate values to KOREAN, single words separated by comma) - memo. No markdown.`;
+          const promptText = `Extract coffee bean info. Return ONLY JSON. Keys: - name, country, region, variety, processing, roastingLevel, producer, shop (Value in ENGLISH) - roastingDate(YYYY-MM-DD), purchaseUrl, price, weight - notes, flavorDesc (Translate values to KOREAN) - memo. No markdown.`;
           const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: promptText }, { inlineData: { mimeType: "image/jpeg", data: base64Data } }] }] })
@@ -738,6 +774,24 @@
         }, 300);
       };
 
+      // v1.7.10: Delete Tasting Record
+      const handleDeleteTasting = () => {
+        if(!selectedId || editTastingIdx === null) return;
+        if(confirm("이 시음 기록을 삭제하시겠습니까?")) {
+             setIsSaving(true);
+             setTimeout(() => {
+                 const newBeans = beans.map(b => {
+                   if(String(b.id) === String(selectedId)) {
+                     const newTastings = b.tastings.filter((_, i) => i !== editTastingIdx);
+                     return { ...b, tastings: newTastings };
+                   }
+                   return b;
+                 });
+                 saveData(newBeans, selectedId, false); 
+             }, 300);
+        }
+      };
+
       const handleDelete = () => {
         if (confirm("삭제하시겠습니까?")) {
           const newBeans = beans.filter(b => String(b.id) !== String(selectedId));
@@ -778,6 +832,18 @@
           setTastingForm(prev => { const nextMode = !prev.isManualTotal; return { ...prev, isManualTotal: nextMode, totalScore: nextMode ? calcAvg(prev.scores) : undefined }; });
       };
       const handleTotalScoreInput = (val) => { setTastingForm(prev => ({ ...prev, totalScore: val })); };
+
+      const handleShopChange = (e) => {
+        const val = e.target.value;
+        setBeanForm(prev => ({ ...prev, shop: val }));
+        if (!beanForm.purchaseUrl) {
+            const match = beans.find(b => b.shop && b.shop.toLowerCase() === val.toLowerCase() && b.purchaseUrl);
+            if (match) {
+                setBeanForm(prev => ({ ...prev, purchaseUrl: match.purchaseUrl }));
+                showToastMsg(`URL 자동 입력: ${match.shop}`);
+            }
+        }
+      };
 
       const sortedBeans = useMemo(() => {
         let result = beans;
@@ -829,7 +895,10 @@
               <header className="p-5 border-b sticky top-0 z-10 bg-white/90 backdrop-blur space-y-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    <h1 className="text-2xl font-black font-brand">BeanLog</h1>
+                    {/* v1.7.6: Header Gap & Color Fix */}
+                    <h1 className="text-2xl font-black font-brand flex items-center gap-1">
+                        BeanLog <CustomBeanIcon size={24} className="text-[#4b2c20]"/>
+                    </h1>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-brand">Coffee bean archive</p>
                   </div>
                   <button onClick={() => navigatePush(VIEW.SETTINGS)} className="p-2 bg-slate-100 rounded-full"><Settings size={20}/></button>
@@ -847,7 +916,7 @@
                         <button key={mode} onClick={() => setFilterMode(mode)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filterMode === mode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>{mode === 'ALL' ? '전체' : (mode === 'BEAN' ? '원두' : '한잔')}</button>
                       ))}
                     </div>
-                    <button onClick={toggleNoteMode} className="px-3 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center transition-colors hover:bg-slate-200">{listNoteMode === NOTE_MODE.BEAN ? <Bean size={18}/> : <Coffee size={18}/>}</button>
+                    <button onClick={toggleNoteMode} className="px-3 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center transition-colors hover:bg-slate-200">{listNoteMode === NOTE_MODE.BEAN ? <CustomBeanIcon size={18}/> : <Coffee size={18}/>}</button>
                     <div className="relative">
                         <button onClick={() => setShowSortMenu(!showSortMenu)} className={`h-full px-3 rounded-xl flex items-center justify-center transition-colors ${showSortMenu ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'}`}><ArrowUpDown size={16} /></button>
                         {showSortMenu && (
@@ -865,13 +934,31 @@
                 </div>
                 {sortMode !== SORT_MODE.CREATED_DESC && <div className="flex justify-end"><span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded flex items-center gap-1">{SORT_LABELS[sortMode]} 정렬 중 <ArrowUpDown size={10}/></span></div>}
               </header>
-              <main className="flex-1 p-4 space-y-4 overflow-y-auto pb-40">
+              <main className="flex-1 p-4 space-y-4 overflow-y-auto pb-40 pt-2">
                 {sortedBeans.length === 0 ? <div className="py-20 text-center opacity-40 font-bold">{searchTerm ? "검색 결과 없음" : "기록이 없습니다"}</div> : 
                   sortedBeans.map(bean => (
-                    <div key={bean.id} onClick={() => navigatePush(VIEW.DETAIL, bean.id)} className="bg-white p-4 rounded-3xl shadow-sm border flex items-center gap-4 active:scale-95 transition-transform">
-                      <div className="w-16 h-16 rounded-xl bg-slate-100 overflow-hidden flex-shrink-0 relative">
-                        {bean.mainImage ? <img src={bean.mainImage} className="w-full h-full object-cover"/> : <div className="w-full h-full flex items-center justify-center text-slate-300"><Bean size={28}/></div>}
+                    <div key={bean.id} onClick={() => navigatePush(VIEW.DETAIL, bean.id)} className="bg-white p-4 rounded-3xl shadow-sm border flex items-start gap-4 active:scale-95 transition-transform">
+                      {/* v1.7.11: New List Layout (Left Image + Meta) */}
+                      <div className="flex flex-col items-center gap-1.5 shrink-0">
+                          <div className={`w-16 h-16 rounded-xl bg-slate-100 overflow-hidden relative flex items-center justify-center ${bean.isFinished ? 'text-slate-300' : 'text-amber-800'}`}>
+                            {bean.mainImage ? <img src={bean.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={32}/>}
+                          </div>
+                          
+                          <div className="flex items-center gap-1">
+                             {/* Score */}
+                             {bean.tastings.length > 0 && (
+                                <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-0.5 border border-amber-100">
+                                    <Star size={8} fill="currentColor"/> {getMaxScore(bean.tastings)}
+                                </span>
+                             )}
+                             {/* Status Icon */}
+                             {bean.isFinished ? 
+                                <CustomBeanIcon size={14} className="text-slate-300"/> : 
+                                (bean.weight ? <CustomBeanIcon size={14} className="text-amber-700"/> : <Coffee size={14} className="text-slate-700"/>)
+                             }
+                          </div>
                       </div>
+                      
                       <div className="flex-1 min-w-0 space-y-1">
                         <h3 className="font-black text-lg break-words leading-tight text-slate-900">{bean.name}</h3>
                         <div className="text-xs text-slate-500 font-medium whitespace-normal leading-relaxed break-words">
@@ -882,10 +969,6 @@
                             {bean.purchaseDate || "-"}
                         </div>
                         <div className="text-slate-400 text-xs mt-1 leading-tight line-clamp-2">{parseTags(getDisplayNote(bean)).join(', ')}</div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        {bean.isFinished ? <BeanOff size={16} className="text-slate-300"/> : (bean.weight ? <Bean size={16} className="text-amber-700"/> : (bean.pricePerCup ? <Coffee size={16} className="text-slate-700"/> : <HelpCircle size={16} className="text-slate-300"/>))}
-                        {bean.tastings.length > 0 && <span className="bg-amber-100 text-amber-800 text-[10px] font-black px-2 py-0.5 rounded-full flex items-center gap-1"><Star size={10} fill="currentColor"/> {getMaxScore(bean.tastings)}</span>}
                       </div>
                     </div>
                   ))
@@ -911,7 +994,8 @@
                   </div>
                   <div className="flex gap-4 items-start">
                       <div className="w-1/2 aspect-square bg-slate-100 relative rounded-2xl overflow-hidden shadow-sm shrink-0">
-                        {activeBean.mainImage ? <img src={activeBean.mainImage} className="w-full h-full object-cover"/> : <div className="absolute inset-0 flex items-center justify-center text-slate-300"><Bean size={32}/></div>}
+                        {/* v1.7.6: Detail Icon Size 96px */}
+                        {activeBean.mainImage ? <img src={activeBean.mainImage} className="w-full h-full object-cover"/> : <div className={`absolute inset-0 flex items-center justify-center ${activeBean.isFinished ? 'text-slate-300' : 'text-amber-800'}`}><CustomBeanIcon size={96}/></div>}
                       </div>
                       <div className="w-1/2 flex flex-wrap content-start gap-1.5">
                           {activeBean.country && <span className="bg-slate-900 text-white px-2 py-1 rounded text-[10px] font-bold">{activeBean.country}</span>}
@@ -1045,7 +1129,25 @@
                         <input type="date" className="bg-transparent font-bold outline-none w-full" value={beanForm.purchaseDate} onChange={e => setBeanForm({...beanForm, purchaseDate: e.target.value})}/>
                     </div>
 
-                    <input className="w-full bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="구매처 (Shop)" value={beanForm.shop} onChange={e => setBeanForm({...beanForm, shop: e.target.value})}/>
+                    <div className="space-y-1">
+                        <label className="text-xs font-bold text-slate-500 ml-1">구매처 (Shop)</label>
+                        <div className="relative">
+                            <ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/>
+                            <input 
+                                list="shop-suggestions"
+                                className="w-full bg-slate-100 p-3 pl-10 rounded-xl text-sm font-bold outline-none"
+                                placeholder="예: Momos Coffee"
+                                value={beanForm.shop}
+                                onChange={handleShopChange}
+                            />
+                            <datalist id="shop-suggestions">
+                                {[...new Set(beans.map(b => b.shop).filter(Boolean))].map((shop, i) => (
+                                    <option key={i} value={shop} />
+                                ))}
+                            </datalist>
+                        </div>
+                    </div>
+
                     <input className="w-full bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="구매 URL (http://...)" value={beanForm.purchaseUrl} onChange={e => setBeanForm({...beanForm, purchaseUrl: e.target.value})}/>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="col-span-2"></div>
@@ -1108,6 +1210,13 @@
                 </div>
                 <textarea className="w-full bg-amber-50 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 outline-none resize-none" placeholder="맛에 대한 자세한 평가" value={tastingForm.desc} onChange={e => setTastingForm({...tastingForm, desc: e.target.value})}/>
                 <textarea className="w-full bg-slate-50 p-4 rounded-2xl h-32 text-sm outline-none resize-none" placeholder="레시피 / 메모" value={tastingForm.memo} onChange={e => setTastingForm({...tastingForm, memo: e.target.value})}/>
+                
+                {/* v1.7.10: Delete Tasting Button */}
+                {editTastingIdx !== null && (
+                    <button onClick={handleDeleteTasting} className="w-full py-4 text-red-500 font-bold bg-red-50 rounded-2xl flex items-center justify-center gap-2 mt-4">
+                        <Trash2 size={16}/> 이 기록 삭제
+                    </button>
+                )}
               </main>
             </div>
           )}
