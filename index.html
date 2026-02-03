@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>BeanLog v1.7.11</title>
+  <title>BeanLog v1.8.1</title>
   <meta name="theme-color" content="#ffffff">
   <meta name="mobile-web-app-capable" content="yes">
   
@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
   
   <style>
+    /* 기본 폰트 설정 */
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@900&display=swap');
 
@@ -23,7 +24,6 @@
     .font-capture { font-family: 'Noto Sans KR', sans-serif; }
 
     .no-scrollbar::-webkit-scrollbar { display: none; }
-    /* Safe Area 대응 */
     body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
     
     #app-loader { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
@@ -35,11 +35,18 @@
     input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     .no-select { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 
+    /* 이미지 강제 고정 스타일 */
     .img-frame { position: relative; overflow: hidden; width: 100%; height: 100%; background-color: #cbd5e1; }
     .img-force-cover { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); min-width: 100%; min-height: 100%; width: auto; height: auto; max-width: none; }
 
     .dot-line { border-bottom: 1px dotted #cbd5e1; flex: 1; margin: 0 4px; position: relative; top: -3px; }
     .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; }
+    
+    /* Animation Utils */
+    .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .animate-pop { animation: pop 0.2s ease-out; }
+    @keyframes pop { 0% { transform: scale(0.9); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
   </style>
 
   <!-- Libraries -->
@@ -62,7 +69,7 @@
   
   <div id="app-loader">
     <div class="spinner"></div>
-    <p style="margin-top:15px; font-weight:bold; color:#666; font-family: sans-serif;">BeanLog v1.7.11</p>
+    <p style="margin-top:15px; font-weight:bold; color:#666; font-family: sans-serif;">BeanLog v1.8.1</p>
   </div>
 
   <div id="root" class="h-full w-full"></div>
@@ -83,12 +90,12 @@
       RefreshCw, Zap, FileText, Clock, ChevronRight, Info, CheckCircle2,
       Quote, StickyNote, Award, Save, Search, X, Check, ShoppingBag, Download, Upload, RotateCcw,
       ExternalLink, MapPin, Tag, User, Mountain, Flame, Bean, BeanOff, HelpCircle, Filter, LayoutList,
-      ArrowUpDown, CalendarDays, MoreHorizontal, ToggleLeft, ToggleRight, PenTool, Minus, Calculator, Share2, Layers
+      ArrowUpDown, CalendarDays, MoreHorizontal, ToggleLeft, ToggleRight, PenTool, Minus, Calculator, Share2, Layers, Sparkles, Palette
     } from 'lucide-react';
 
     // 1. CONSTANTS
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL"; 
-    const APP_VERSION = "v1.7.11";
+    const APP_VERSION = "v1.8.1"; // Smart Parsing + Full Data
 
     const VIEW = { LIST: 'LIST', DETAIL: 'DETAIL', EDIT_BEAN: 'EDIT_BEAN', EDIT_TASTING: 'EDIT_TASTING', SETTINGS: 'SETTINGS' };
     const NOTE_MODE = { BEAN: 'BEAN', TASTING: 'TASTING' }; 
@@ -120,6 +127,18 @@
         cleanCup: "클린컵", body: "바디", flavor: "향미"
     };
 
+    // v1.8.1: Full Flavor Data Set (8 Categories, 87 Notes)
+    const FLAVOR_DATA = [
+      { id: 'fruity', label: '과일 (Fruity)', color: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', subs: [ { group: '베리류 (Berry)', items: ['딸기', '블루베리', '라즈베리', '블랙베리', '크랜베리', '복분자', '산딸기'] }, { group: '감귤류 (Citrus)', items: ['레몬', '라임', '오렌지', '자몽', '귤', '유자', '베르가못', '만다린', '탠저린'] }, { group: '핵과류 (Stone Fruit)', items: ['복숭아', '살구', '자두', '체리', '앵두', '천도복숭아', '자두(Plum)'] }, { group: '열대 과일 (Tropical)', items: ['망고', '파인애플', '바나나', '코코넛', '파파야', '리치', '패션후르츠', '멜론', '수박', '키위'] }, { group: '기타 과일', items: ['사과', '청사과', '배', '포도', '청포도', '머스캣', '석류', '무화과', '토마토'] }, { group: '말린 과일', items: ['건포도', '말린 자두(프룬)', '곶감', '대추', '건무화과'] } ] },
+      { id: 'floral', label: '꽃/차 (Floral)', color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', subs: [ { group: '꽃 향기', items: ['자스민', '장미', '카모마일', '라벤더', '히비스커스', '아카시아', '엘더플라워', '벚꽃', '목련'] }, { group: '차 (Tea)', items: ['홍차', '녹차', '얼그레이', '우롱차', '말차', '보리차', '허브티'] } ] },
+      { id: 'sweet', label: '달콤함 (Sweet)', color: 'bg-orange-400', bg: 'bg-orange-50', text: 'text-orange-700', subs: [ { group: '설탕/시럽', items: ['꿀', '흑설탕', '캬라멜', '메이플 시럽', '조청', '당밀', '달고나', '황설탕'] }, { group: '디저트/크림', items: ['바닐라', '버터', '크림', '마시멜로우', '토피', '연유', '커스터드', '생크림'] } ] },
+      { id: 'nutty', label: '견과/초코 (Nutty)', color: 'bg-amber-700', bg: 'bg-amber-50', text: 'text-amber-900', subs: [ { group: '초콜릿', items: ['다크 초콜릿', '밀크 초콜릿', '카카오닙스', '코코아 파우더', '초코시럽'] }, { group: '견과류', items: ['아몬드', '호두', '땅콩', '헤이즐넛', '피칸', '캐슈넛', '마카다미아', '피스타치오', '밤'] } ] },
+      { id: 'roasted', label: '고소함 (Roasted)', color: 'bg-stone-500', bg: 'bg-stone-100', text: 'text-stone-700', subs: [ { group: '곡물 (Cereal)', items: ['곡물', '맥아', '볶은 보리', '토스트', '누룽지', '뻥튀기', '비스킷', '라이맥', '오트밀'] }, { group: '로스트 (Roast)', items: ['스모키', '탄맛', '재(Ash)', '타바코', '가죽', '훈제'] }, { group: '감칠맛 (Savory)', items: ['간장', '된장', '팝콘', '버터맛'] } ] },
+      { id: 'spices', label: '향신료 (Spices)', color: 'bg-rose-900', bg: 'bg-rose-50', text: 'text-rose-900', subs: [ { group: '브라운 스파이스', items: ['시나몬', '정향', '육두구', '아니스', '감초', '계피'] }, { group: '허브/기타', items: ['후추', '생강', '민트', '세이지', '딜', '레몬그라스', '바질', '유칼립투스', '카레'] } ] },
+      { id: 'vegetal', label: '채소/지구 (Vegetal)', color: 'bg-green-600', bg: 'bg-green-50', text: 'text-green-700', subs: [ { group: '흙내음 (Earthy)', items: ['흙', '나무(Woody)', '건초', '지푸라기', '버섯', '이끼', '숲바닥'] }, { group: '채소 (Vegetable)', items: ['오이', '완두콩', '호박', '피망', '풀(Grassy)', '올리브', '깻잎'] } ] },
+      { id: 'sour', label: '산미/발효 (Sour)', color: 'bg-yellow-500', bg: 'bg-yellow-50', text: 'text-yellow-800', subs: [ { group: '알콜/발효', items: ['와인', '위스키', '럼', '샴페인', '막걸리', '발효취', '뱅쇼'] }, { group: '산미/기타', items: ['식초', '요거트', '치즈', '시큼한', '고무', '약품'] } ] }
+    ];
+
     const INITIAL_BEAN = {
       id: null,
       name: "", country: "", region: "", variety: "", processing: "", 
@@ -145,12 +164,15 @@
       set: (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } }
     };
 
+    // v1.8.1 Fix: Smart Parsing Logic
     const parseTags = (text) => {
       if (!text) return [];
-      if (text.includes(',') || text.includes('/')) {
-        return text.split(/[,\/]/).map(t => t.trim()).filter(t => t);
+      // 콤마(,)나 슬래시(/)가 하나라도 있으면 '정밀 모드' (공백 유지)
+      if (/[,/]/.test(text)) {
+          return text.split(/[,/]+/).map(t => t.trim()).filter(Boolean);
       }
-      return text.split(/\s+/).map(t => t.trim()).filter(t => t);
+      // 없으면 '간편 모드' (공백으로 나눔)
+      return text.split(/\s+/).map(t => t.trim()).filter(Boolean);
     };
 
     const calcAvg = (scores) => {
@@ -269,11 +291,113 @@
             <path fillOpacity="1.0" d="M 708.5,221.5 C 707.7,222.3 706.7,222.8 705.5,223C 709.5,226.6 710.8,230.9 709.5,236C 712.1,236.8 712.1,237.3 709.5,237.5C 708,236.7 706.7,236.7 705.5,237.5C 699.6,253.4 690.6,267.2 678.5,279C 664.2,289.5 649.5,299.5 634.5,309C 590.3,346.8 562.2,394.3 550,451.5C 546,481.8 539.3,511.5 530,540.5C 504.3,613.9 456.4,667.4 386.5,701C 373.4,709.9 365.4,722.1 362.5,737.5C 363,741.8 365,745.3 368.5,748C 380.6,756.1 393.9,760.9 408.5,762.5C 411.3,763.3 414.3,763.8 417.5,764C 426.8,764.5 436.1,764.6 445.5,764.5C 447.9,764.3 450.1,764.5 452.5,765C 447.8,765.3 443.5,766.6 439.5,769C 441.7,770.8 443.7,772.8 445.5,775C 448.8,775.3 452.1,775.6 455.5,776C 453.9,776.2 452.6,776.7 451.5,777.5C 422.4,780.6 394.8,776.1 368.5,764C 350.4,755.3 344.9,741.4 352,722.5C 359.2,707.2 370.1,695 384.5,686C 446.4,656.0 489.5,608.9 514,544.5C 519.5,529.1 524.2,513.4 528,497.5C 531.7,473.6 536.4,449.9 542,426.5C 557.4,375.6 585.3,333.1 625.5,299C 636.6,290.5 648.3,282.9 660.5,276C 678.3,262.5 690.3,245 696.5,223.5C 700,220.3 704,219.7 708.5,221.5 Z"/>
             <path fillOpacity="1.0" d="M 379.5,650.5 C 384.7,649.3 387.7,651.3 388.5,656.5C 390.1,656.2 391.1,656.9 391.5,658.5C 377.8,665.8 365.3,674.8 354,685.5C 343.7,697 336.2,710.2 331.5,725C 326.2,727.4 321.5,726.6 317.5,722.5C 317.9,721.7 318.5,721.2 319.5,721C 317.3,720.5 316.6,719.5 317.5,718C 314.3,716.1 313.9,714.1 316.5,712C 313.9,710.9 313.9,709.7 316.5,708.5C 318.1,708.5 319.8,708.5 321.5,708.5C 322.3,709.5 323.2,709.5 324,708.5C 335.1,682.1 353.6,662.8 379.5,650.5 Z"/>
         </g>
-        <g fill="white" fillOpacity="0.3">
-             <path d="M 603.5,204.5 C 615.9,204.3 628.2,204.8 640.5,206C 649.1,206.4 656.9,208.9 664,213.5C 662,230.8 653.5,243.8 638.5,252.5C 615.8,263.4 594.8,276.9 575.5,293C 567.9,300.1 560.9,307.6 554.5,315.5C 524.6,351 504.4,391.7 494,437.5C 489.9,474.7 480.9,510.7 467,545.5C 453,577.8 433.2,606 407.5,630C 398.5,637.5 389.2,644.3 379.5,650.5C 353.7,662.8 335.2,682.2 324,708.5C 323.2,709.6 322.4,709.6 321.5,708.5C 306.4,692.2 295.9,673.2 290,651.5C 282.8,623.2 280.6,594.5 283.5,565.5C 284.9,560.1 285.6,554.4 285.5,548.5C 293.6,499.2 310.1,452.9 335,409.5C 368.2,351.3 411.7,302.1 465.5,262C 496.3,239.8 529.9,223.1 566.5,212C 578.8,208.8 591.2,206.3 603.5,204.5 Z"/>
-        </g>
+        <g fill="white" fillOpacity="0.3"><path d="M 603.5,204.5 C 615.9,204.3 628.2,204.8 640.5,206C 649.1,206.4 656.9,208.9 664,213.5C 662,230.8 653.5,243.8 638.5,252.5C 615.8,263.4 594.8,276.9 575.5,293C 567.9,300.1 560.9,307.6 554.5,315.5C 524.6,351 504.4,391.7 494,437.5C 489.9,474.7 480.9,510.7 467,545.5C 453,577.8 433.2,606 407.5,630C 398.5,637.5 389.2,644.3 379.5,650.5C 353.7,662.8 335.2,682.2 324,708.5C 323.2,709.6 322.4,709.6 321.5,708.5C 306.4,692.2 295.9,673.2 290,651.5C 282.8,623.2 280.6,594.5 283.5,565.5C 284.9,560.1 285.6,554.4 285.5,548.5C 293.6,499.2 310.1,452.9 335,409.5C 368.2,351.3 411.7,302.1 465.5,262C 496.3,239.8 529.9,223.1 566.5,212C 578.8,208.8 591.2,206.3 603.5,204.5 Z"/></g>
       </svg>
     );
+
+    // v1.8 New Component: Flavor Picker
+    const FlavorPicker = ({ onClose, onConfirm, initialNotes = "" }) => {
+        const [activeTab, setActiveTab] = useState('fruity');
+        // Smart Parsing Logic for initial notes
+        const [selectedNotes, setSelectedNotes] = useState(
+            initialNotes 
+              ? (/[,/]/.test(initialNotes) 
+                  ? initialNotes.split(/[,/]+/).map(s => s.trim()).filter(Boolean)
+                  : initialNotes.split(/\s+/).map(s => s.trim()).filter(Boolean))
+              : []
+        );
+
+        const toggleNote = (note) => {
+            if (selectedNotes.includes(note)) {
+                setSelectedNotes(selectedNotes.filter(n => n !== note));
+            } else {
+                setSelectedNotes([...selectedNotes, note]);
+            }
+        };
+
+        const activeCategory = FLAVOR_DATA.find(d => d.id === activeTab);
+
+        return (
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center animate-in fade-in backdrop-blur-sm">
+                <div className="w-full max-w-md h-[85vh] sm:h-[700px] bg-white sm:rounded-[32px] rounded-t-[32px] shadow-2xl flex flex-col relative animate-slide-up overflow-hidden font-sans">
+                    
+                    <div className="p-5 pb-2 flex justify-between items-center bg-white z-10 shrink-0">
+                        <div>
+                            <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                                <Palette size={20} className="text-indigo-500"/> Flavor Picker
+                            </h2>
+                            <p className="text-xs text-slate-400 mt-1">원하는 맛을 터치하여 선택하세요.</p>
+                        </div>
+                        <button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:bg-slate-200"><X size={20}/></button>
+                    </div>
+
+                    <div className="border-b border-slate-100 bg-white shrink-0">
+                        <div className="flex overflow-x-auto no-scrollbar px-5 gap-2 pb-3 pt-1">
+                            {FLAVOR_DATA.map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => setActiveTab(cat.id)}
+                                    className={`
+                                        whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-bold transition-all
+                                        ${activeTab === cat.id ? `${cat.color} text-white shadow-md scale-105` : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}
+                                    `}
+                                >
+                                    {cat.label.split(' ')[0]}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={`flex-1 overflow-y-auto p-5 pb-32 transition-colors duration-300 ${activeCategory.bg}`}>
+                        {activeCategory.subs.map((sub, idx) => (
+                            <div key={idx} className="mb-6 animate-pop" style={{ animationDelay: `${idx * 50}ms` }}>
+                                <h3 className={`text-xs font-bold ${activeCategory.text} uppercase mb-2 ml-1 opacity-80 flex items-center gap-1`}>
+                                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span> {sub.group}
+                                </h3>
+                                <div className="flex flex-wrap gap-2">
+                                    {sub.items.map((item) => {
+                                        const isSelected = selectedNotes.includes(item);
+                                        return (
+                                            <button
+                                                key={item}
+                                                onClick={() => toggleNote(item)}
+                                                className={`
+                                                    px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all
+                                                    ${isSelected 
+                                                        ? 'bg-slate-800 border-slate-800 text-white shadow-md scale-105' 
+                                                        : 'bg-white border-transparent text-slate-600 hover:border-slate-200'}
+                                                `}
+                                            >
+                                                {item}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-5 z-20 pb-8 sm:pb-5 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+                        <div className="flex overflow-x-auto no-scrollbar gap-2 mb-4 pb-1 min-h-[30px] items-center">
+                            {selectedNotes.length > 0 ? selectedNotes.map(note => (
+                                <span key={note} className="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-200 animate-pop">
+                                    {note} <button onClick={() => toggleNote(note)}><X size={10} className="text-slate-400 hover:text-red-500"/></button>
+                                </span>
+                            )) : <span className="text-xs text-slate-400">선택된 맛이 없습니다.</span>}
+                        </div>
+                        
+                        <button 
+                            onClick={() => onConfirm(selectedNotes.join(', '))}
+                            className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-slate-800"
+                        >
+                            <Check size={18}/> {selectedNotes.length}개 선택 완료
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        );
+    };
 
     const RadarChart = ({ scores }) => {
       const size = 120, center = size/2, radius = size*0.4;
@@ -345,6 +469,7 @@
       );
     };
 
+    // --- [Component] ShareModal (v1.7.7 Based: Image Viewer) ---
     const ShareModal = ({ bean, tasting, onClose }) => {
         const cardRef = useRef(null);
         const [generatedImg, setGeneratedImg] = useState(null);
@@ -398,8 +523,10 @@
         return (
             <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4 animate-in fade-in">
                 
+                {/* 1. Source Card (Hidden) */}
                 <div className="fixed top-0 left-[-9999px]">
                     <div ref={cardRef} className="w-[320px] bg-white rounded-sm shadow-2xl overflow-hidden flex flex-col font-capture text-slate-800">
+                        {/* Header: Background Image Method */}
                         <div className="relative h-60 bg-slate-200">
                              {bean.mainImage ? (
                                 <div 
@@ -412,8 +539,8 @@
                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                              
                              <div className="absolute bottom-0 left-0 right-0 p-5 text-white z-10">
-                                <div className="flex items-center justify-between mb-2 opacity-100">
-                                    <span className="text-[10px] font-black text-white font-capture whitespace-nowrap drop-shadow-md truncate max-w-[75%]">
+                                <div className="flex items-center justify-between mb-2 opacity-100 items-start">
+                                    <span className="text-[10px] font-black text-white font-capture whitespace-nowrap drop-shadow-md truncate max-w-[70%]">
                                         {bean.shop || "Home Cafe"}
                                     </span>
                                     <div className="flex flex-col items-end drop-shadow-md">
@@ -435,6 +562,7 @@
                              </div>
                         </div>
 
+                        {/* Body (v11 + v1.7.7 Note Fix) */}
                         <div className="p-5 flex flex-col gap-4 bg-white">
                             <div className="grid grid-cols-1 gap-3">
                                 {beanTags.length > 0 && (
@@ -477,6 +605,7 @@
                             </div>
                         </div>
 
+                        {/* Score */}
                         <div className="bg-slate-50 border-t border-slate-100 p-4 px-5 flex items-center justify-between gap-3">
                             <div className="flex flex-col shrink-0 items-center justify-center">
                                 <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total</span>
@@ -493,12 +622,14 @@
                             </div>
                             <div className="w-[70px] h-[70px] shrink-0"><AccurateRadarChart scores={tasting.scores} /></div>
                         </div>
+                        {/* Footer */}
                         <div className="bg-slate-900 text-white text-center py-2">
                              <p className="text-[8px] font-bold tracking-[0.2em] uppercase opacity-60 font-brand">Recorded with BeanLog</p>
                         </div>
                     </div>
                 </div>
 
+                {/* 2. Generated Viewer */}
                 <div className="flex flex-col items-center gap-6">
                     {isGenerating ? (
                         <div className="flex flex-col items-center text-white gap-2">
@@ -524,6 +655,7 @@
         );
     };
 
+    // --- [Component] ImageCropper (MANUAL & RESIZE) ---
     const ImageCropper = ({ imageSrc, aspectRatio, onComplete, onCancel }) => {
       const imgRef = useRef(null);
       const cropperRef = useRef(null);
@@ -640,6 +772,10 @@
       const [showSuccessModal, setShowSuccessModal] = useState(false);
       const [toast, setToast] = useState(null);
 
+      // v1.8 New States
+      const [showFlavorPicker, setShowFlavorPicker] = useState(false);
+      const [pickerTarget, setPickerTarget] = useState(null); // 'bean' or 'tasting'
+
       const [beanForm, setBeanForm] = useState({ ...INITIAL_BEAN });
       const [tastingForm, setTastingForm] = useState({ ...INITIAL_TASTING });
       const [tempOcrImage, setTempOcrImage] = useState(null);
@@ -674,18 +810,17 @@
       }, []);
 
       useEffect(() => {
-        // v1.7.10: Scroll reset added
         window.scrollTo(0, 0);
-
         const handlePopState = (event) => {
           if (cropImage) { setCropImage(null); window.history.pushState({ view: currentView, id: selectedId }, ''); return; }
           if (shareData) { setShareData(null); window.history.pushState({ view: currentView, id: selectedId }, ''); return; }
+          if (showFlavorPicker) { setShowFlavorPicker(false); window.history.pushState({ view: currentView, id: selectedId }, ''); return; }
           if (event.state) { setCurrentView(event.state.view); setSelectedId(event.state.id); } 
           else { setCurrentView(VIEW.LIST); setSelectedId(null); }
         };
         window.addEventListener('popstate', handlePopState);
         return () => window.removeEventListener('popstate', handlePopState);
-      }, [cropImage, currentView, selectedId, shareData]);
+      }, [cropImage, currentView, selectedId, shareData, showFlavorPicker]);
 
       const navigatePush = (view, id = null) => { window.history.pushState({ view, id }, ''); setCurrentView(view); setSelectedId(id); };
       const navigateReplace = (view, id = null) => { window.history.replaceState({ view, id }, ''); setCurrentView(view); setSelectedId(id); };
@@ -774,7 +909,6 @@
         }, 300);
       };
 
-      // v1.7.10: Delete Tasting Record
       const handleDeleteTasting = () => {
         if(!selectedId || editTastingIdx === null) return;
         if(confirm("이 시음 기록을 삭제하시겠습니까?")) {
@@ -845,6 +979,16 @@
         }
       };
 
+      // v1.8: Handle Flavor Pick
+      const handleFlavorPick = (text) => {
+          if (pickerTarget === 'bean') {
+              setBeanForm(prev => ({ ...prev, notes: text }));
+          } else if (pickerTarget === 'tasting') {
+              setTastingForm(prev => ({ ...prev, notes: text }));
+          }
+          setShowFlavorPicker(false);
+      };
+
       const sortedBeans = useMemo(() => {
         let result = beans;
         if (filterMode === 'BEAN') result = result.filter(b => b.weight); else if (filterMode === 'CUP') result = result.filter(b => b.pricePerCup);
@@ -889,13 +1033,21 @@
           <FontLoader />
           {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
           
+          {/* v1.8: Flavor Picker Modal */}
+          {showFlavorPicker && (
+              <FlavorPicker 
+                onClose={() => setShowFlavorPicker(false)}
+                onConfirm={handleFlavorPick}
+                initialNotes={pickerTarget === 'bean' ? beanForm.notes : tastingForm.notes}
+              />
+          )}
+          
           {/* ----- VIEW: LIST ----- */}
           {currentView === VIEW.LIST && (
             <>
               <header className="p-5 border-b sticky top-0 z-10 bg-white/90 backdrop-blur space-y-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    {/* v1.7.6: Header Gap & Color Fix */}
                     <h1 className="text-2xl font-black font-brand flex items-center gap-1">
                         BeanLog <CustomBeanIcon size={24} className="text-[#4b2c20]"/>
                     </h1>
@@ -938,24 +1090,17 @@
                 {sortedBeans.length === 0 ? <div className="py-20 text-center opacity-40 font-bold">{searchTerm ? "검색 결과 없음" : "기록이 없습니다"}</div> : 
                   sortedBeans.map(bean => (
                     <div key={bean.id} onClick={() => navigatePush(VIEW.DETAIL, bean.id)} className="bg-white p-4 rounded-3xl shadow-sm border flex items-start gap-4 active:scale-95 transition-transform">
-                      {/* v1.7.11: New List Layout (Left Image + Meta) */}
                       <div className="flex flex-col items-center gap-1.5 shrink-0">
                           <div className={`w-16 h-16 rounded-xl bg-slate-100 overflow-hidden relative flex items-center justify-center ${bean.isFinished ? 'text-slate-300' : 'text-amber-800'}`}>
                             {bean.mainImage ? <img src={bean.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={32}/>}
                           </div>
-                          
                           <div className="flex items-center gap-1">
-                             {/* Score */}
                              {bean.tastings.length > 0 && (
                                 <span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-0.5 border border-amber-100">
                                     <Star size={8} fill="currentColor"/> {getMaxScore(bean.tastings)}
                                 </span>
                              )}
-                             {/* Status Icon */}
-                             {bean.isFinished ? 
-                                <CustomBeanIcon size={14} className="text-slate-300"/> : 
-                                (bean.weight ? <CustomBeanIcon size={14} className="text-amber-700"/> : <Coffee size={14} className="text-slate-700"/>)
-                             }
+                             {bean.isFinished ? <CustomBeanIcon size={14} className="text-slate-300"/> : (bean.weight ? <CustomBeanIcon size={14} className="text-amber-700"/> : <Coffee size={14} className="text-slate-700"/>)}
                           </div>
                       </div>
                       
@@ -994,7 +1139,6 @@
                   </div>
                   <div className="flex gap-4 items-start">
                       <div className="w-1/2 aspect-square bg-slate-100 relative rounded-2xl overflow-hidden shadow-sm shrink-0">
-                        {/* v1.7.6: Detail Icon Size 96px */}
                         {activeBean.mainImage ? <img src={activeBean.mainImage} className="w-full h-full object-cover"/> : <div className={`absolute inset-0 flex items-center justify-center ${activeBean.isFinished ? 'text-slate-300' : 'text-amber-800'}`}><CustomBeanIcon size={96}/></div>}
                       </div>
                       <div className="w-1/2 flex flex-wrap content-start gap-1.5">
@@ -1156,10 +1300,26 @@
                     </div>
                     <input className="w-full bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="한 잔 가격 (카페)" value={beanForm.pricePerCup} onChange={e => setBeanForm({...beanForm, pricePerCup: e.target.value})}/>
                   </div>
+                  
+                  {/* v1.8 New: Flavor Note Input with Picker */}
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Flavor Keywords (콤마/슬래시/공백 구분)</label>
-                    <input className="w-full bg-amber-50 p-4 rounded-xl text-sm font-bold text-amber-900 outline-none" placeholder="베리, 초콜릿 / 꽃 (자동 태그)" value={beanForm.notes} onChange={e => setBeanForm({...beanForm, notes: e.target.value})}/>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Flavor Keywords</label>
+                    <div className="relative">
+                        <input 
+                            className="w-full bg-amber-50 p-4 pr-12 rounded-xl text-sm font-bold text-amber-900 outline-none placeholder-amber-900/30"
+                            placeholder="베리, 초콜릿 (콤마 구분)"
+                            value={beanForm.notes}
+                            onChange={e => setBeanForm({...beanForm, notes: e.target.value})}
+                        />
+                        <button 
+                            onClick={() => { setPickerTarget('bean'); setShowFlavorPicker(true); }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white rounded-lg shadow-sm text-amber-600 border border-amber-100"
+                        >
+                            <Palette size={16}/>
+                        </button>
+                    </div>
                   </div>
+
                   <textarea className="w-full bg-amber-50 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 outline-none resize-none" placeholder="향미에 대한 자세한 설명 (줄글)" value={beanForm.flavorDesc} onChange={e => setBeanForm({...beanForm, flavorDesc: e.target.value})}/>
                   <textarea className="w-full bg-slate-50 p-4 rounded-2xl h-24 text-sm outline-none resize-none" placeholder="기타 메모 (보관법 등)" value={beanForm.memo} onChange={e => setBeanForm({...beanForm, memo: e.target.value})}/>
                 </div>
@@ -1204,14 +1364,29 @@
                     </div>
                   ))}
                 </div>
+                
+                {/* v1.8 New: Flavor Note Input with Picker */}
                 <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Keywords (콤마/슬래시/공백 구분)</label>
-                    <input className="w-full bg-amber-50 p-4 rounded-xl text-sm font-bold text-amber-900 outline-none" placeholder="산미 단맛 (띄어쓰기로 구분)" value={tastingForm.notes} onChange={e => setTastingForm({...tastingForm, notes: e.target.value})}/>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Keywords</label>
+                    <div className="relative">
+                        <input 
+                            className="w-full bg-amber-50 p-4 pr-12 rounded-xl text-sm font-bold text-amber-900 outline-none placeholder-amber-900/30" 
+                            placeholder="산미, 단맛 (콤마 구분)"
+                            value={tastingForm.notes} 
+                            onChange={e => setTastingForm({...tastingForm, notes: e.target.value})}
+                        />
+                        <button 
+                            onClick={() => { setPickerTarget('tasting'); setShowFlavorPicker(true); }}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white rounded-lg shadow-sm text-amber-600 border border-amber-100"
+                        >
+                            <Palette size={16}/>
+                        </button>
+                    </div>
                 </div>
+
                 <textarea className="w-full bg-amber-50 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 outline-none resize-none" placeholder="맛에 대한 자세한 평가" value={tastingForm.desc} onChange={e => setTastingForm({...tastingForm, desc: e.target.value})}/>
                 <textarea className="w-full bg-slate-50 p-4 rounded-2xl h-32 text-sm outline-none resize-none" placeholder="레시피 / 메모" value={tastingForm.memo} onChange={e => setTastingForm({...tastingForm, memo: e.target.value})}/>
                 
-                {/* v1.7.10: Delete Tasting Button */}
                 {editTastingIdx !== null && (
                     <button onClick={handleDeleteTasting} className="w-full py-4 text-red-500 font-bold bg-red-50 rounded-2xl flex items-center justify-center gap-2 mt-4">
                         <Trash2 size={16}/> 이 기록 삭제
