@@ -1258,6 +1258,7 @@
 
     const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg }) => {
         if (!active && !apiKey) return null;
+
         const backup = () => {
             const data = { beans: safeStorage.get(`${STORAGE_KEY}_data`), recipes: safeStorage.get(RECIPE_STORAGE_KEY), key: safeStorage.get(`${STORAGE_KEY}_key`) };
             const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
@@ -1268,7 +1269,6 @@
             const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.beans) { safeStorage.set(`${STORAGE_KEY}_data`, d.beans); alert("원두 데이터 복원 완료"); } if (d.recipes) { safeStorage.set(RECIPE_STORAGE_KEY, d.recipes); alert("레시피 데이터 복원 완료"); } if (d.key) { safeStorage.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); } } catch (e) { alert("파일 오류"); } }; r.readAsText(f);
         };
         const reset = () => { if (confirm("모든 데이터가 삭제됩니다. 초기화하시겠습니까?")) { localStorage.removeItem(`${STORAGE_KEY}_data`); localStorage.removeItem(RECIPE_STORAGE_KEY); localStorage.removeItem(`${STORAGE_KEY}_key`); location.reload(); } };
-        const exitApp = () => { window.opener=null; window.open('','_self'); window.close(); setTimeout(()=>showToastMsg("기기의 홈 버튼이나 제스처를 사용하여 종료해주세요."), 500); };
 
         return (
             <div className={`h-full flex flex-col bg-white ${active ? 'block' : 'hidden'}`}>
@@ -1276,7 +1276,7 @@
                 <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); safeStorage.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
                     <div className="pt-8 border-t space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={backup} className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept=".json" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
-                    <div className="pt-8 border-t space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button><button onClick={exitApp} className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2"><LogOut size={18}/> 앱 종료</button></div>
+                    <div className="pt-8 border-t space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://github.com/imonraside/beanlog" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 text-blue-600 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
                     <div className="pt-10 text-center"><p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">BeanLog {APP_VERSION}</p></div>
                 </div>
             </div>
