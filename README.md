@@ -1,5 +1,7 @@
 # ☕ BeanLog - 나만의 커피 아카이브 & 브루잉 타이머
 
+**서비스 접속:** [https://imonraside.github.io/beanlog](https://imonraside.github.io/beanlog)
+
 **BeanLog**는 커피 애호가를 위한 올인원 기록 앱입니다. 원두 구매부터 시음 노트 작성, 그리고 정교한 브루잉 타이머까지 하나의 앱에서 관리하세요. PWA(Progressive Web App) 기술로 제작되어 별도의 스토어 다운로드 없이 웹에서 바로 설치하여 네이티브 앱처럼 사용할 수 있습니다.
 
 ---
@@ -19,7 +21,7 @@
 
 ## 📲 앱 설치 방법
 
-BeanLog는 **PWA** 앱입니다. 브라우저를 통해 접속한 뒤 홈 화면에 추가하여 사용하세요.
+BeanLog는 **PWA** 앱입니다. 브라우저를 통해 [서비스 주소](https://imonraside.github.io/beanlog)에 접속한 뒤 홈 화면에 추가하여 사용하세요.
 
 ### Android (삼성 인터넷 / Chrome)
 1. 브라우저 주소창 옆의 **설치 아이콘(⬇️)** 또는 하단의 **'앱 다운로드'** 배너를 클릭하세요.
@@ -120,3 +122,4 @@ BeanLog는 서버 없이 동작하는 앱으로, 모든 데이터는 사용자�
 ---
 
 Designed & Developed by **BeanLog**
+
