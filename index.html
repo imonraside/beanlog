@@ -1290,7 +1290,7 @@
         useEffect(() => {
             const initPWA = async () => {
                 // 1. Setup Icons & Manifest dynamically
-                const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="212 184 600 600" width="1024" height="1024" style="background-color:#f3f4f6; shape-rendering:geometricPrecision; fill-rule:evenodd; clip-rule:evenodd">
+                const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="112 84 800 800" width="512" height="512" style="shape-rendering:geometricPrecision; fill-rule:evenodd; clip-rule:evenodd">
                 <g fill="#4b2c20" stroke="#4b2c20" stroke-width="20" stroke-linejoin="round" stroke-linecap="round">
                     <path fill-opacity="0.9" d="M 606.5,191.5 C 626.3,189.9 645.6,192.1 664.5,198C 675.1,200.9 679.6,207.8 678,218.5C 673.5,239.2 662,254.5 643.5,264.5C 641.1,262.9 641.1,261.4 643.5,260C 642.4,258.6 641.1,257.6 639.5,257C 642.3,254.8 642,253.3 638.5,252.5C 653.5,243.8 662,230.8 664,213.5C 656.9,208.9 649.1,206.4 640.5,206C 628.2,204.8 615.9,204.3 603.5,204.5C 604.3,203.6 606,203.1 608.5,203C 605.1,202.8 601.8,202.3 598.5,201.5C 599.2,198.6 600.5,196.1 602.5,194C 601.5,193.7 600.5,193.3 599.5,193C 602,192.8 604.4,192.3 606.5,191.5 Z"/>
                     <path fill-opacity="0.8" d="M 708.5,221.5 C 732.2,236 749.7,256 761,281.5C 773.9,310.9 780.4,341.8 780.5,374C 780.4,399.5 777.7,424.7 772.5,449.5C 768.5,441.6 765.5,433.2 763.5,424.5C 771.2,379 767,334.6 751,291.5C 741.7,269.9 727.9,251.9 709.5,237.5C 712.1,237.3 712.1,236.8 709.5,236C 710.8,230.9 709.5,226.6 705.5,223C 706.7,222.8 707.7,222.3 708.5,221.5 Z"/>
@@ -1310,8 +1310,8 @@
 
                 // 2. Convert to PNG (Critical for Samsung Internet)
                 const canvas = document.createElement('canvas');
-                canvas.width = 1024;
-                canvas.height = 1024;
+                canvas.width = 512;
+                canvas.height = 512;
                 const ctx = canvas.getContext('2d');
                 ctx.imageSmoothingEnabled = true;
                 ctx.imageSmoothingQuality = 'high';
@@ -1341,8 +1341,8 @@
                     background_color: "#f3f4f6", 
                     theme_color: "#f3f4f6", 
                     icons: [
-                        { src: svgUrl, sizes: "1024x1024", type: "image/svg+xml", purpose: "any" },
-                        { src: pngUrl, sizes: "1024x1024", type: "image/png", purpose: "any maskable" }
+                        { src: svgUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
+                        { src: pngUrl, sizes: "512x512", type: "image/png", purpose: "any" }
                     ] 
                 };
                 
