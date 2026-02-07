@@ -95,9 +95,10 @@
     const TASTE_ITEMS = [{ id: 'acidity', label: '산미' }, { id: 'balance', label: '밸런스' }, { id: 'sweetness', label: '단맛' }, { id: 'cleanCup', label: '클린컵' }, { id: 'body', label: '바디' }, { id: 'flavor', label: '향미' }];
     const SCORE_LABELS_KO = { acidity: "산미", balance: "밸런스", sweetness: "단맛", cleanCup: "클린컵", body: "바디", flavor: "향미" };
 
+    // v1.8.1: Full Flavor Data Set (8 Categories, 87 Notes)
     const FLAVOR_DATA = [
-      { id: 'fruity', label: '과일 (Fruity)', color: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', subs: [ { group: '베리류', items: ['딸기', '블루베리', '라즈베리'] }, { group: '감귤류', items: ['레몬', '라임', '오렌지', '자몽'] }, { group: '핵과류', items: ['복숭아', '살구', '자두', '체리'] }, { group: '열대 과일', items: ['망고', '파인애플', '코코넛'] } ] },
-      { id: 'floral', label: '꽃/차 (Floral)', color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', subs: [ { group: '꽃', items: ['자스민', '장미', '카모마일', '라벤더', '히비스커스', '아카시아', '엘더플라워', '벚꽃', '목련'] }, { group: '차', items: ['홍차', '녹차', '얼그레이', '우롱차', '말차', '보리차', '허브티'] } ] },
+      { id: 'fruity', label: '과일 (Fruity)', color: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', subs: [ { group: '베리류 (Berry)', items: ['딸기', '블루베리', '라즈베리', '블랙베리', '크랜베리', '복분자', '산딸기'] }, { group: '감귤류 (Citrus)', items: ['레몬', '라임', '오렌지', '자몽', '귤', '유자', '베르가못', '만다린', '탠저린'] }, { group: '핵과류 (Stone Fruit)', items: ['복숭아', '살구', '자두', '체리', '앵두', '천도복숭아', '자두(Plum)'] }, { group: '열대 과일 (Tropical)', items: ['망고', '파인애플', '바나나', '코코넛', '파파야', '리치', '패션후르츠', '멜론', '수박', '키위'] }, { group: '기타 과일', items: ['사과', '청사과', '배', '포도', '청포도', '머스캣', '석류', '무화과', '토마토'] }, { group: '말린 과일', items: ['건포도', '말린 자두(프룬)', '곶감', '대추', '건무화과'] } ] },
+      { id: 'floral', label: '꽃/차 (Floral)', color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', subs: [ { group: '꽃 향기', items: ['자스민', '장미', '카모마일', '라벤더', '히비스커스', '아카시아', '엘더플라워', '벚꽃', '목련'] }, { group: '차 (Tea)', items: ['홍차', '녹차', '얼그레이', '우롱차', '말차', '보리차', '허브티'] } ] },
       { id: 'sweet', label: '달콤함 (Sweet)', color: 'bg-orange-400', bg: 'bg-orange-50', text: 'text-orange-700', subs: [ { group: '설탕/시럽', items: ['꿀', '흑설탕', '캬라멜', '메이플 시럽', '조청', '당밀', '달고나', '황설탕'] }, { group: '디저트/크림', items: ['바닐라', '버터', '크림', '마시멜로우', '토피', '연유', '커스터드', '생크림'] } ] },
       { id: 'nutty', label: '견과/초코 (Nutty)', color: 'bg-amber-700', bg: 'bg-amber-50', text: 'text-amber-900', subs: [ { group: '초콜릿', items: ['다크 초콜릿', '밀크 초콜릿', '카카오닙스', '코코아 파우더', '초코시럽'] }, { group: '견과류', items: ['아몬드', '호두', '땅콩', '헤이즐넛', '피칸', '캐슈넛', '마카다미아', '피스타치오', '밤'] } ] },
       { id: 'roasted', label: '고소함 (Roasted)', color: 'bg-stone-500', bg: 'bg-stone-100', text: 'text-stone-700', subs: [ { group: '곡물 (Cereal)', items: ['곡물', '맥아', '볶은 보리', '토스트', '누룽지', '뻥튀기', '비스킷', '라이맥', '오트밀'] }, { group: '로스트 (Roast)', items: ['스모키', '탄맛', '재(Ash)', '타바코', '가죽', '훈제'] }, { group: '감칠맛 (Savory)', items: ['간장', '된장', '팝콘', '버터맛'] } ] },
@@ -1289,7 +1290,7 @@
         useEffect(() => {
             const initPWA = async () => {
                 // 1. Setup Icons & Manifest dynamically
-                const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="152 124 720 720" width="512" height="512" style="background-color:#f3f4f6">
+                const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="152 124 720 720" width="1024" height="1024" style="background-color:#f3f4f6">
                 <g fill="#b45309" stroke="#b45309" stroke-width="20" stroke-linejoin="round" stroke-linecap="round">
                     <path fill-opacity="0.9" d="M 606.5,191.5 C 626.3,189.9 645.6,192.1 664.5,198C 675.1,200.9 679.6,207.8 678,218.5C 673.5,239.2 662,254.5 643.5,264.5C 641.1,262.9 641.1,261.4 643.5,260C 642.4,258.6 641.1,257.6 639.5,257C 642.3,254.8 642,253.3 638.5,252.5C 653.5,243.8 662,230.8 664,213.5C 656.9,208.9 649.1,206.4 640.5,206C 628.2,204.8 615.9,204.3 603.5,204.5C 604.3,203.6 606,203.1 608.5,203C 605.1,202.8 601.8,202.3 598.5,201.5C 599.2,198.6 600.5,196.1 602.5,194C 601.5,193.7 600.5,193.3 599.5,193C 602,192.8 604.4,192.3 606.5,191.5 Z"/>
                     <path fill-opacity="0.8" d="M 708.5,221.5 C 732.2,236 749.7,256 761,281.5C 773.9,310.9 780.4,341.8 780.5,374C 780.4,399.5 777.7,424.7 772.5,449.5C 768.5,441.6 765.5,433.2 763.5,424.5C 771.2,379 767,334.6 751,291.5C 741.7,269.9 727.9,251.9 709.5,237.5C 712.1,237.3 712.1,236.8 709.5,236C 710.8,230.9 709.5,226.6 705.5,223C 706.7,222.8 707.7,222.3 708.5,221.5 Z"/>
@@ -1307,9 +1308,11 @@
 
                 // 2. Convert to PNG (Critical for Samsung Internet)
                 const canvas = document.createElement('canvas');
-                canvas.width = 512;
-                canvas.height = 512;
+                canvas.width = 1024;
+                canvas.height = 1024;
                 const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
                 const img = new Image();
                 
                 await new Promise((resolve) => {
@@ -1335,8 +1338,8 @@
                     background_color: "#f3f4f6", 
                     theme_color: "#f3f4f6", 
                     icons: [
-                        { src: svgUrl, sizes: "512x512", type: "image/svg+xml", purpose: "any" },
-                        { src: pngUrl, sizes: "512x512", type: "image/png", purpose: "maskable" }
+                        { src: svgUrl, sizes: "1024x1024", type: "image/svg+xml", purpose: "any" },
+                        { src: pngUrl, sizes: "1024x1024", type: "image/png", purpose: "maskable" }
                     ] 
                 };
                 const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
@@ -1347,7 +1350,13 @@
             initPWA();
 
             // 5. Install Prompt Listener
-            const handler = (e) => { e.preventDefault(); setDeferredPrompt(e); setShowInstallBtn(true); };
+            const handler = (e) => { 
+                e.preventDefault(); 
+                setDeferredPrompt(e); 
+                if (!sessionStorage.getItem('pwa_dismissed')) {
+                    setShowInstallBtn(true); 
+                }
+            };
             window.addEventListener('beforeinstallprompt', handler);
             return () => window.removeEventListener('beforeinstallprompt', handler);
         }, []);
@@ -1360,7 +1369,7 @@
                 <button onClick={handleInstall} className="bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl flex items-center gap-3 font-bold text-sm border border-slate-700 whitespace-nowrap">
                     <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center text-amber-700"><CustomBeanIcon size={20} /></div>
                     앱 다운로드 (바로가기)
-                    <X size={16} className="text-slate-500 ml-1" onClick={(e) => { e.stopPropagation(); setShowInstallBtn(false); }} />
+                    <X size={16} className="text-slate-500 ml-1" onClick={(e) => { e.stopPropagation(); setShowInstallBtn(false); sessionStorage.setItem('pwa_dismissed', 'true'); }} />
                 </button>
             </div>
         );
