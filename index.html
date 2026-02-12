@@ -8,6 +8,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config={darkMode:'class'}</script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" />
   
   <style>
@@ -62,7 +63,7 @@
   </script>
   <script src="https://unpkg.com/@babel/standalone@7.23.8/babel.min.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-900 select-none overflow-hidden w-full h-full">
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 select-none overflow-hidden w-full h-full">
   <div id="app-loader"><div class="spinner"></div><p style="margin-top:15px; font-weight:bold; color:#666;">BeanLog loading</p></div>
   <div id="root" class="h-full w-full"></div>
   <script>setTimeout(()=>{const l=document.getElementById('app-loader');if(l)l.style.display='none'},1500);</script>
@@ -75,7 +76,7 @@
       Plus, Camera, Settings, ChevronLeft, Trash2, Coffee, Calendar, Star,
       RefreshCw, Zap, FileText, Clock, ChevronRight, Info, CheckCircle2,
       Quote, StickyNote, Award, Save, Search, X, Check, ShoppingBag, Download, Upload, RotateCcw,
-      ExternalLink, MapPin, Tag, User, Mountain, Flame, Bean, BeanOff, HelpCircle, Filter, LayoutList, LogOut,
+      ExternalLink, MapPin, Tag, User, Mountain, Flame, Bean, BeanOff, HelpCircle, Filter, LayoutList, LogOut, Sun, Moon, Monitor, Image as ImageIcon,
       ArrowUpDown, CalendarDays, MoreHorizontal, ToggleLeft, ToggleRight, PenTool, Minus, Calculator, Share2, Layers, Sparkles, Palette,
       Layout, Timer, Play, Pause, Droplet, RefreshCcw, Tornado, Target, Utensils, Waves, List, AlertCircle,
       LayoutDashboard, PieChart, BarChart3, ChevronLeftCircle, ChevronRightCircle, ChevronDown, ChevronsLeft, ChevronsRight
@@ -84,10 +85,10 @@
     // --- 1. GLOBAL HELPERS & CONSTANTS ---
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL";
     const RECIPE_STORAGE_KEY = `${STORAGE_KEY}_recipes`;
-    const APP_VERSION = "v1.0.0";
+    const APP_VERSION = "v1.1.0";
     const TAB = { BEANS: 'BEANS', TIMER: 'TIMER', STATS: 'STATS', SETTINGS: 'SETTINGS' };
     
-    const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, mainImage: null, ocrImage: null, tastings: [] };
+    const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, isBlend: false, blendInfo: [], mainImage: null, ocrImage: null, tastings: [] };
     const INITIAL_TASTING = { date: new Date().toISOString().split('T')[0], scores: { acidity: 7.0, balance: 7.0, sweetness: 7.0, cleanCup: 7.0, body: 7.0, flavor: 7.0 }, isManualTotal: false, totalScore: 7.0, notes: "", desc: "", memo: "" };
     // [Fix] Empty Initial Recipe (Global Definition)
     const INITIAL_RECIPE = { id: null, title: "", bean: "", water: "", interval: "", endTime: "", memo: "" };
@@ -97,14 +98,14 @@
 
     // v1.8.1: Full Flavor Data Set (8 Categories, 87 Notes)
     const FLAVOR_DATA = [
-      { id: 'fruity', label: '과일 (Fruity)', color: 'bg-red-500', bg: 'bg-red-50', text: 'text-red-700', subs: [ { group: '베리류 (Berry)', items: ['딸기', '블루베리', '라즈베리', '블랙베리', '크랜베리', '복분자', '산딸기'] }, { group: '감귤류 (Citrus)', items: ['레몬', '라임', '오렌지', '자몽', '귤', '유자', '베르가못', '만다린', '탠저린'] }, { group: '핵과류 (Stone Fruit)', items: ['복숭아', '살구', '자두', '체리', '앵두', '천도복숭아', '자두(Plum)'] }, { group: '열대 과일 (Tropical)', items: ['망고', '파인애플', '바나나', '코코넛', '파파야', '리치', '패션후르츠', '멜론', '수박', '키위'] }, { group: '기타 과일', items: ['사과', '청사과', '배', '포도', '청포도', '머스캣', '석류', '무화과', '토마토'] }, { group: '말린 과일', items: ['건포도', '말린 자두(프룬)', '곶감', '대추', '건무화과'] } ] },
-      { id: 'floral', label: '꽃/차 (Floral)', color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50', text: 'text-fuchsia-700', subs: [ { group: '꽃 향기', items: ['자스민', '장미', '카모마일', '라벤더', '히비스커스', '아카시아', '엘더플라워', '벚꽃', '목련'] }, { group: '차 (Tea)', items: ['홍차', '녹차', '얼그레이', '우롱차', '말차', '보리차', '허브티'] } ] },
-      { id: 'sweet', label: '달콤함 (Sweet)', color: 'bg-orange-400', bg: 'bg-orange-50', text: 'text-orange-700', subs: [ { group: '설탕/시럽', items: ['꿀', '흑설탕', '캬라멜', '메이플 시럽', '조청', '당밀', '달고나', '황설탕'] }, { group: '디저트/크림', items: ['바닐라', '버터', '크림', '마시멜로우', '토피', '연유', '커스터드', '생크림'] } ] },
-      { id: 'nutty', label: '견과/초코 (Nutty)', color: 'bg-amber-700', bg: 'bg-amber-50', text: 'text-amber-900', subs: [ { group: '초콜릿', items: ['다크 초콜릿', '밀크 초콜릿', '카카오닙스', '코코아 파우더', '초코시럽'] }, { group: '견과류', items: ['아몬드', '호두', '땅콩', '헤이즐넛', '피칸', '캐슈넛', '마카다미아', '피스타치오', '밤'] } ] },
-      { id: 'roasted', label: '고소함 (Roasted)', color: 'bg-stone-500', bg: 'bg-stone-100', text: 'text-stone-700', subs: [ { group: '곡물 (Cereal)', items: ['곡물', '맥아', '볶은 보리', '토스트', '누룽지', '뻥튀기', '비스킷', '라이맥', '오트밀'] }, { group: '로스트 (Roast)', items: ['스모키', '탄맛', '재(Ash)', '타바코', '가죽', '훈제'] }, { group: '감칠맛 (Savory)', items: ['간장', '된장', '팝콘', '버터맛'] } ] },
-      { id: 'spices', label: '향신료 (Spices)', color: 'bg-rose-900', bg: 'bg-rose-50', text: 'text-rose-900', subs: [ { group: '브라운 스파이스', items: ['시나몬', '정향', '육두구', '아니스', '감초', '계피'] }, { group: '허브/기타', items: ['후추', '생강', '민트', '세이지', '딜', '레몬그라스', '바질', '유칼립투스', '카레'] } ] },
-      { id: 'vegetal', label: '채소/지구 (Vegetal)', color: 'bg-green-600', bg: 'bg-green-50', text: 'text-green-700', subs: [ { group: '흙내음 (Earthy)', items: ['흙', '나무(Woody)', '건초', '지푸라기', '버섯', '이끼', '숲바닥'] }, { group: '채소 (Vegetable)', items: ['오이', '완두콩', '호박', '피망', '풀(Grassy)', '올리브', '깻잎'] } ] },
-      { id: 'sour', label: '산미/발효 (Sour)', color: 'bg-yellow-500', bg: 'bg-yellow-50', text: 'text-yellow-800', subs: [ { group: '알콜/발효', items: ['와인', '위스키', '럼', '샴페인', '막걸리', '발효취', '뱅쇼'] }, { group: '산미/기타', items: ['식초', '요거트', '치즈', '시큼한', '고무', '약품'] } ] }
+      { id: 'fruity', label: '과일 (Fruity)', color: 'bg-red-500', bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', subs: [ { group: '베리류 (Berry)', items: ['딸기', '블루베리', '라즈베리', '블랙베리', '크랜베리', '복분자', '산딸기'] }, { group: '감귤류 (Citrus)', items: ['레몬', '라임', '오렌지', '자몽', '귤', '유자', '베르가못', '만다린', '탠저린'] }, { group: '핵과류 (Stone Fruit)', items: ['복숭아', '살구', '자두', '체리', '앵두', '천도복숭아', '자두(Plum)'] }, { group: '열대 과일 (Tropical)', items: ['망고', '파인애플', '바나나', '코코넛', '파파야', '리치', '패션후르츠', '멜론', '수박', '키위'] }, { group: '기타 과일', items: ['사과', '청사과', '배', '포도', '청포도', '머스캣', '석류', '무화과', '토마토'] }, { group: '말린 과일', items: ['건포도', '말린 자두(프룬)', '곶감', '대추', '건무화과'] } ] },
+      { id: 'floral', label: '꽃/차 (Floral)', color: 'bg-fuchsia-500', bg: 'bg-fuchsia-50 dark:bg-fuchsia-900/20', text: 'text-fuchsia-700 dark:text-fuchsia-300', subs: [ { group: '꽃 향기', items: ['자스민', '장미', '카모마일', '라벤더', '히비스커스', '아카시아', '엘더플라워', '벚꽃', '목련'] }, { group: '차 (Tea)', items: ['홍차', '녹차', '얼그레이', '우롱차', '말차', '보리차', '허브티'] } ] },
+      { id: 'sweet', label: '달콤함 (Sweet)', color: 'bg-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-300', subs: [ { group: '설탕/시럽', items: ['꿀', '흑설탕', '캬라멜', '메이플 시럽', '조청', '당밀', '달고나', '황설탕'] }, { group: '디저트/크림', items: ['바닐라', '버터', '크림', '마시멜로우', '토피', '연유', '커스터드', '생크림'] } ] },
+      { id: 'nutty', label: '견과/초코 (Nutty)', color: 'bg-amber-700', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-900 dark:text-amber-300', subs: [ { group: '초콜릿', items: ['다크 초콜릿', '밀크 초콜릿', '카카오닙스', '코코아 파우더', '초코시럽'] }, { group: '견과류', items: ['아몬드', '호두', '땅콩', '헤이즐넛', '피칸', '캐슈넛', '마카다미아', '피스타치오', '밤'] } ] },
+      { id: 'roasted', label: '고소함 (Roasted)', color: 'bg-stone-500', bg: 'bg-stone-100 dark:bg-stone-900/20', text: 'text-stone-700 dark:text-stone-300', subs: [ { group: '곡물 (Cereal)', items: ['곡물', '맥아', '볶은 보리', '토스트', '누룽지', '뻥튀기', '비스킷', '라이맥', '오트밀'] }, { group: '로스트 (Roast)', items: ['스모키', '탄맛', '재(Ash)', '타바코', '가죽', '훈제'] }, { group: '감칠맛 (Savory)', items: ['간장', '된장', '팝콘', '버터맛'] } ] },
+      { id: 'spices', label: '향신료 (Spices)', color: 'bg-rose-900', bg: 'bg-rose-50 dark:bg-rose-900/20', text: 'text-rose-900 dark:text-rose-300', subs: [ { group: '브라운 스파이스', items: ['시나몬', '정향', '육두구', '아니스', '감초', '계피'] }, { group: '허브/기타', items: ['후추', '생강', '민트', '세이지', '딜', '레몬그라스', '바질', '유칼립투스', '카레'] } ] },
+      { id: 'vegetal', label: '채소/지구 (Vegetal)', color: 'bg-green-600', bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-300', subs: [ { group: '흙내음 (Earthy)', items: ['흙', '나무(Woody)', '건초', '지푸라기', '버섯', '이끼', '숲바닥'] }, { group: '채소 (Vegetable)', items: ['오이', '완두콩', '호박', '피망', '풀(Grassy)', '올리브', '깻잎'] } ] },
+      { id: 'sour', label: '산미/발효 (Sour)', color: 'bg-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-800 dark:text-yellow-300', subs: [ { group: '알콜/발효', items: ['와인', '위스키', '럼', '샴페인', '막걸리', '발효취', '뱅쇼'] }, { group: '산미/기타', items: ['식초', '요거트', '치즈', '시큼한', '고무', '약품'] } ] }
     ];
 
     const safeStorage = {
@@ -131,6 +132,61 @@
     const getBestTastingNote = (tastings) => { if (!tastings || tastings.length === 0) return null; const sorted = [...tastings].sort((a, b) => parseFloat(getDisplayScore(b)) - parseFloat(getDisplayScore(a))); return sorted[0].notes; };
     const calcPricePer100g = (price, weight) => { if(!price || !weight) return null; const p = parseFloat(price.replace(/,/g, '')); const w = parseFloat(weight); if(isNaN(p) || isNaN(w) || w === 0) return null; return Math.round((p / w) * 100).toLocaleString(); };
     const formatWeight = (g) => { const num = parseFloat(g); if (isNaN(num)) return "0g"; if (num >= 1000) return `${(num/1000).toFixed(1)}kg`; return `${num}g`; };
+    
+    const getFlagEmoji = (countryName) => {
+        if (!countryName) return null;
+        const lower = countryName.toLowerCase().trim();
+        const map = {
+            '한국': '🇰🇷', 'korea': '🇰🇷', '대한민국': '🇰🇷', '에티오피아': '🇪🇹', 'ethiopia': '🇪🇹', '콜롬비아': '🇨🇴', 'colombia': '🇨🇴',
+            '브라질': '🇧🇷', 'brazil': '🇧🇷', '과테말라': '🇬🇹', 'guatemala': '🇬🇹', '케냐': '🇰🇪', 'kenya': '🇰🇪',
+            '코스타리카': '🇨🇷', 'costa rica': '🇨🇷', 'costarica': '🇨🇷', '파나마': '🇵🇦', 'panama': '🇵🇦',
+            '엘살바도르': '🇸🇻', 'el salvador': '🇸🇻', 'elsalvador': '🇸🇻', '온두라스': '🇭🇳', 'honduras': '🇭🇳',
+            '인도네시아': '🇮🇩', 'indonesia': '🇮🇩', '베트남': '🇻🇳', 'vietnam': '🇻🇳', '예멘': '🇾🇪', 'yemen': '🇾🇪',
+            '르완다': '🇷🇼', 'rwanda': '🇷🇼', '부룬디': '🇧🇮', 'burundi': '🇧🇮', '탄자니아': '🇹🇿', 'tanzania': '🇹🇿',
+            '멕시코': '🇲🇽', 'mexico': '🇲🇽', '페루': '🇵🇪', 'peru': '🇵🇪', '볼리비아': '🇧🇴', 'bolivia': '🇧🇴',
+            '에콰도르': '🇪🇨', 'ecuador': '🇪🇨', '인도': '🇮🇳', 'india': '🇮🇳', '파푸아뉴기니': '🇵🇬', 'papua new guinea': '🇵🇬',
+            '미국': '🇺🇸', 'usa': '🇺🇸', 'us': '🇺🇸', '하와이': '🇺🇸', '중국': '🇨🇳', 'china': '🇨🇳', '호주': '🇦🇺', 'australia': '🇦🇺', '니카라과': '🇳🇮',
+        };
+        for (const [key, emoji] of Object.entries(map)) { if (lower.includes(key)) return emoji; }
+        return null;
+    };
+    
+    const getRoastAge = (dateStr) => {
+        if (!dateStr) return null;
+        const now = new Date();
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const roast = new Date(y, m - 1, d);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const diff = Math.floor((today - roast) / (86400000));
+        return diff >= 0 ? `+${diff}` : `${diff}`;
+    };
+
+    const DEMO_IMG_1 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmM2Y0ZjYiLz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSg1MCA1MCkiPjxnIGZpbGw9IiNGRkYiIHN0cm9rZT0iI0QxRDVEQiIgc3Ryb2tlLXdpZHRoPSIyIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjMwIiByPSIxMiIvPjxjaXJjbGUgY3g9IjY5IiBjeT0iNDMiIHI9IjEyIi8+PGNpcmNsZSBjeD0iNjIiIGN5PSI2NSIgcj0iMTIiLz48Y2lyY2xlIGN4PSIzOCIgY3k9IjY1IiByPSIxMiIvPjxjaXJjbGUgY3g9IjMxIiBjeT0iNDMiIHI9IjEyIi8+PC9nPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjEwIiBmaWxsPSIjRkJCRjI0Ii8+PC9nPjwvc3ZnPg==';
+    const DEMO_IMG_2 = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgdmlld0JveD0iMCAwIDIwMCAyMDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmM2Y0ZjYiLz48ZyB0cmFuc2Zvcm09InRyYW5zbGF0ZSgxMDAgMTAwKSIgc3Ryb2tlPSIjRkJCRjI0IiBzdHJva2Utd2lkdGg9IjgiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PGNpcmNsZSBjeD0iMCIgY3k9IjAiIHI9IjMwIiBmaWxsPSIjRkJCRjI0IiBzdHJva2U9Im5vbmUiLz48bGluZSB4MT0iMCIgeTE9Ii00MCIgeDI9IjAiIHkyPSItNTUiIC8+PGxpbmUgeDE9IjAiIHkxPSI0MCIgeDI9IjAiIHkyPSI1NSIgLz48bGluZSB4MT0iLTQwIiB5MT0iMCIgeDI9Ii01NSIgeTI9IjAiIC8+PGxpbmUgeDE9IjQwIiB5MT0iMCIgeDI9IjU1IiB5Mj0iMCIgLz48bGluZSB4MT0iLTI4LjI4IiB5MT0iLTI4LjI4IiB4Mj0iLTM4Ljg5IiB5Mj0iLTM4Ljg5IiAvPjxsaW5lIHgxPSIyOC4yOCIgeTE9IjI4LjI4IiB4Mj0iMzguODkiIHkyPSIzOC44OSIgLz48bGluZSB4MT0iLTI4LjI4IiB5MT0iMjguMjgiIHgyPSItMzguODkiIHkyPSIzOC44OSIgLz48bGluZSB4MT0iMjguMjgiIHkxPSItMjguMjgiIHgyPSIzOC44OSIgeTI9Ii0zOC44OSIgLz48L2c+PC9zdmc+';
+
+    const getDemoData = () => {
+        const now = new Date();
+        const d = (days) => new Date(now.getTime() - days * 86400000).toISOString().split('T')[0];
+        
+        return [
+            {
+                id: `demo_${Date.now() + 1}`, name: "에티오피아 예가체프 G1", country: "에티오피아", region: "예가체프", variety: "Heirloom", processing: "Washed", altitude: "1900-2200m", roastingLevel: "Light", producer: "", roastingDate: d(15), purchaseDate: d(10), shop: "데모 커피 로스터스", purchaseUrl: "", weight: "200", price: "22000", pricePerCup: "", notes: "자스민, 베르가못, 복숭아, 꿀", flavorDesc: "꽃향기와 함께 상큼한 과일의 산미가 매력적입니다.", memo: "핸드드립으로 내렸을 때 가장 맛이 좋았음.", isFinished: false, isBlend: false, blendInfo: [], mainImage: DEMO_IMG_1,
+                tastings: [{ date: d(5), scores: { acidity: 8.5, balance: 8.0, sweetness: 8.2, cleanCup: 8.5, body: 7.5, flavor: 8.8 }, isManualTotal: false, totalScore: 0, notes: "자스민, 레몬, 복숭아", desc: "향이 폭발적이다. 산미가 기분 좋게 느껴진다.", memo: "하리오 V60 / 93도 / 1:16 비율" }]
+            },
+            {
+                id: `demo_${Date.now() + 2}`, name: "하우스 블렌드 '선샤인'", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "Medium", producer: "", roastingDate: d(25), purchaseDate: d(20), shop: "데모 커피 로스터스", purchaseUrl: "", weight: "500", price: "35000", pricePerCup: "", notes: "견과류, 다크 초콜릿, 좋은 밸런스", flavorDesc: "매일 마시기 좋은 고소하고 균형잡힌 커피.", memo: "", isFinished: true, isBlend: true, blendInfo: [{ country: "브라질", variety: "Catuai", ratio: "60" }, { country: "콜롬비아", variety: "Castillo", ratio: "40" }], mainImage: DEMO_IMG_2,
+                tastings: [{ date: d(15), scores: { acidity: 7.0, balance: 8.5, sweetness: 7.8, cleanCup: 8.0, body: 8.2, flavor: 7.5 }, isManualTotal: false, totalScore: 0, notes: "아몬드, 초콜릿, 카라멜", desc: "고소함이 지배적이며, 식었을 때 단맛이 올라온다.", memo: "자동 머신으로 추출" }]
+            },
+            {
+                id: `demo_${Date.now() + 3}`, name: "스타벅스 오늘의 커피", shop: "스타벅스", pricePerCup: "4200", weight: "", purchaseDate: d(2), notes: "무난한 맛, 약간의 스모키함", isFinished: false, isBlend: true,
+                tastings: [{ date: d(2), scores: { acidity: 6.5, balance: 7.0, sweetness: 6.5, cleanCup: 7.0, body: 7.5, flavor: 6.5 }, isManualTotal: true, totalScore: "7.0", notes: "스모키, 탄맛", desc: "진하고 무난한 맛.", memo: "" }]
+            },
+            {
+                id: `demo_${Date.now() + 4}`, name: "블루보틀 놀라 플로트", shop: "블루보틀", pricePerCup: "7500", weight: "", purchaseDate: d(1), notes: "달콤한 라떼, 아이스크림", isFinished: false, isBlend: true,
+                tastings: []
+            }
+        ];
+    };
 
     // --- 2. GLOBAL COMPONENTS (Defined at top) ---
 
@@ -269,7 +325,7 @@
       return (
         <div className="fixed inset-0 z-[60] bg-black/90 flex flex-col animate-in fade-in">
           <div className="flex-1 relative bg-black flex items-center justify-center p-4 overflow-hidden">
-             <img ref={imageRef} src={imageSrc} alt="Crop" style={{ maxWidth: '100%', maxHeight: '80vh' }} />
+             <img ref={imageRef} src={imageSrc} alt="Crop" style={{ maxWidth: '100%', maxHeight: '80vh', opacity: 0 }} />
           </div>
           <div className="p-5 bg-slate-900 flex justify-between gap-4">
              <button onClick={onCancel} className="flex-1 py-3 bg-slate-800 text-white rounded-xl font-bold">취소</button>
@@ -285,12 +341,12 @@
         const toggleNote = (note) => setSelectedNotes(selectedNotes.includes(note) ? selectedNotes.filter(n => n !== note) : [...selectedNotes, note]);
         const activeCategory = FLAVOR_DATA.find(d => d.id === activeTab);
         return (
-            <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center animate-in fade-in backdrop-blur-sm" onClick={onClose}>
-                <div className="w-full max-w-md h-[85vh] sm:h-[700px] bg-white sm:rounded-[32px] rounded-t-[32px] shadow-2xl flex flex-col relative animate-slide-up overflow-hidden font-sans" onClick={e=>e.stopPropagation()}>
-                    <div className="p-5 pb-2 flex justify-between items-center bg-white z-10 shrink-0"><div><h2 className="text-xl font-black text-slate-900 flex items-center gap-2"><Palette size={20} className="text-indigo-500"/> Flavor Picker</h2><p className="text-xs text-slate-400 mt-1">원하는 맛을 터치하여 선택하세요.</p></div><button onClick={onClose} className="p-2 bg-slate-100 rounded-full text-slate-400 hover:bg-slate-200"><X size={20}/></button></div>
-                    <div className="border-b border-slate-100 bg-white shrink-0"><div className="flex overflow-x-auto no-scrollbar px-5 gap-2 pb-3 pt-1">{FLAVOR_DATA.map((cat) => (<button key={cat.id} onClick={() => setActiveTab(cat.id)} className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === cat.id ? `${cat.color} text-white shadow-md scale-105` : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{cat.label.split(' ')[0]}</button>))}</div></div>
+            <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center animate-in fade-in backdrop-blur-sm dark:bg-black/70" onClick={onClose}>
+                <div className="w-full max-w-md h-[85vh] sm:h-[700px] bg-white dark:bg-slate-900 sm:rounded-[32px] rounded-t-[32px] shadow-2xl flex flex-col relative animate-slide-up overflow-hidden font-sans" onClick={e=>e.stopPropagation()}>
+                    <div className="p-5 pb-2 flex justify-between items-center bg-white dark:bg-slate-900 z-10 shrink-0"><div><h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2"><Palette size={20} className="text-indigo-500"/> Flavor Picker</h2><p className="text-xs text-slate-400 mt-1">원하는 맛을 터치하여 선택하세요.</p></div><button onClick={onClose} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"><X size={20}/></button></div>
+                    <div className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0"><div className="flex overflow-x-auto no-scrollbar px-5 gap-2 pb-3 pt-1">{FLAVOR_DATA.map((cat) => (<button key={cat.id} onClick={() => setActiveTab(cat.id)} className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === cat.id ? `${cat.color} text-white shadow-md scale-105` : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>{cat.label.split(' ')[0]}</button>))}</div></div>
                     <div className={`flex-1 overflow-y-auto p-5 pb-32 transition-colors duration-300 ${activeCategory.bg}`}>{activeCategory.subs.map((sub, idx) => (<div key={idx} className="mb-6 animate-pop" style={{ animationDelay: `${idx * 50}ms` }}><h3 className={`text-xs font-bold ${activeCategory.text} uppercase mb-2 ml-1 opacity-80 flex items-center gap-1`}><span className="w-1.5 h-1.5 rounded-full bg-current"></span> {sub.group}</h3><div className="flex flex-wrap gap-2">{sub.items.map((item) => { const isSelected = selectedNotes.includes(item); return (<button key={item} onClick={() => toggleNote(item)} className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${isSelected ? 'bg-slate-800 border-slate-800 text-white shadow-md scale-105' : 'bg-white border-transparent text-slate-600 hover:border-slate-200'}`}>{item}</button>) })}</div></div>))}</div>
-                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-5 z-20 pb-8 sm:pb-5 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]"><div className="flex overflow-x-auto no-scrollbar gap-2 mb-4 pb-1 min-h-[30px] items-center">{selectedNotes.length > 0 ? selectedNotes.map(note => (<span key={note} className="whitespace-nowrap px-3 py-1 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-200 animate-pop">{note} <button onClick={() => toggleNote(note)}><X size={10} className="text-slate-400 hover:text-red-500"/></button></span>)) : <span className="text-xs text-slate-400">선택된 맛이 없습니다.</span>}</div><button onClick={() => onConfirm(selectedNotes.join(', '))} className="w-full bg-slate-900 text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-slate-800"><Check size={18}/> {selectedNotes.length}개 선택 완료</button></div>
+                    <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-5 z-20 pb-8 sm:pb-5 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]"><div className="flex overflow-x-auto no-scrollbar gap-2 mb-4 pb-1 min-h-[30px] items-center">{selectedNotes.length > 0 ? selectedNotes.map(note => (<span key={note} className="whitespace-nowrap px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-200 dark:border-slate-700 animate-pop">{note} <button onClick={() => toggleNote(note)}><X size={10} className="text-slate-400 hover:text-red-500"/></button></span>)) : <span className="text-xs text-slate-400">선택된 맛이 없습니다.</span>}</div><button onClick={() => onConfirm(selectedNotes.join(', '))} className="w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200"><Check size={18}/> {selectedNotes.length}개 선택 완료</button></div>
                 </div>
             </div>
         );
@@ -333,13 +389,13 @@
     };
 
     const TimerStepRow = ({ step, isCurrent, isPast, itemRef }) => (
-        <div ref={itemRef} className={`flex items-center gap-4 p-5 rounded-2xl border transition-all duration-500 cursor-pointer ${isCurrent ? `bg-white shadow-xl step-active border-l-8` : (isPast ? 'bg-slate-100 opacity-60 grayscale border-transparent step-inactive' : 'bg-white border-transparent opacity-70')}`}>
-            <div className={`rounded-xl p-1.5 flex items-center gap-1 border shrink-0 min-w-[60px] justify-center transition-colors ${isCurrent ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
+        <div ref={itemRef} className={`flex items-center gap-4 p-5 rounded-2xl border transition-all duration-500 cursor-pointer ${isCurrent ? `bg-white dark:bg-slate-900 shadow-xl step-active border-l-8 dark:border-slate-800` : (isPast ? 'bg-slate-100 dark:bg-slate-800 opacity-60 grayscale border-transparent step-inactive' : 'bg-white dark:bg-slate-900 border-transparent opacity-70')}`}>
+            <div className={`rounded-xl p-1.5 flex items-center gap-1 border shrink-0 min-w-[60px] justify-center transition-colors ${isCurrent ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900/30' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700'}`}>
                 {step.icons && step.icons.length > 0 ? step.icons.map((item, idx) => <MiniIcon key={idx} iconType={item.icon} isMain={item.type === 'MAIN'} />) : <Clock size={16} className="text-slate-300"/>}
             </div>
             <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center mb-0.5"><span className={`text-[10px] font-bold uppercase tracking-wider ${isCurrent ? 'text-blue-500' : 'text-slate-400'}`}>{step.originalCmd || 'STEP'}</span><span className="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 rounded">{step.timeRange}</span></div>
-                <h3 className={`text-base font-bold leading-tight break-keep flex flex-wrap items-baseline gap-1 ${isCurrent ? 'text-slate-900' : 'text-slate-500'}`}>
+                <h3 className={`text-base font-bold leading-tight break-keep flex flex-wrap items-baseline gap-1 ${isCurrent ? 'text-slate-900 dark:text-slate-100' : 'text-slate-500 dark:text-slate-500'}`}>
                     <span>{step.desc}</span>
                     {step.cumWater && (
                         <span className="text-xs text-blue-500 font-medium whitespace-nowrap ml-1">
@@ -440,7 +496,7 @@
 
 
     // --- BEANS TAB ---
-    const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed }) => {
+    const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey }) => {
         const VIEW = { LIST: 'LIST', DETAIL: 'DETAIL', EDIT_BEAN: 'EDIT_BEAN', EDIT_TASTING: 'EDIT_TASTING' };
         const NOTE_MODE = { BEAN: 'BEAN', TASTING: 'TASTING' };
         const SORT_MODE = { CREATED_DESC: 'CREATED_DESC', PURCHASE_DESC: 'PURCHASE_DESC', ROAST_DESC: 'ROAST_DESC', SCORE_DESC: 'SCORE_DESC', STATUS_ASC: 'STATUS_ASC' };
@@ -469,7 +525,14 @@
         const [cropRatio, setCropRatio] = useState(NaN);
         const [showRandomPopup, setShowRandomPopup] = useState(false);
         const [randomBean, setRandomBean] = useState(null);
+        const [tastingMenuIdx, setTastingMenuIdx] = useState(null);
+        const longPressTimer = useRef(null);
+        const isLongPress = useRef(false);
         
+        const addBlendInfo = () => setBeanForm(prev => ({ ...prev, blendInfo: [...(prev.blendInfo || []), { country: "", variety: "", ratio: "" }] }));
+        const removeBlendInfo = (idx) => setBeanForm(prev => ({ ...prev, blendInfo: prev.blendInfo.filter((_, i) => i !== idx) }));
+        const updateBlendInfo = (idx, field, val) => setBeanForm(prev => ({ ...prev, blendInfo: prev.blendInfo.map((item, i) => i === idx ? { ...item, [field]: val } : item) }));
+
         // Scroll Management Refs
         const mainRef = useRef(null);
         const scrollMap = useRef({});
@@ -558,6 +621,7 @@
                 if(cropImage) { setCropImage(null); return; }
                 if(showFlavorPicker) { setShowFlavorPicker(false); return; }
                 if(showRandomPopup) { setShowRandomPopup(false); return; }
+                if(tastingMenuIdx !== null) { setTastingMenuIdx(null); return; }
                 
                 if (event.state && event.state.tab === TAB.BEANS) {
                     if (event.state.view) {
@@ -571,7 +635,7 @@
             };
             window.addEventListener('popstate', handlePop);
             return () => window.removeEventListener('popstate', handlePop);
-        }, [active, shareData, cropImage, showFlavorPicker, showRandomPopup]);
+        }, [active, shareData, cropImage, showFlavorPicker, showRandomPopup, tastingMenuIdx]);
 
         // [Fix for Ghost View]
         useEffect(() => {
@@ -585,7 +649,7 @@
                    if (!selectedId) setView(VIEW.LIST);
                 }
             }
-        }, [active, navProps]);
+        }, [active, navProps, navKey]);
 
         const openLink = (url) => {
             if (!url) return;
@@ -677,30 +741,70 @@
         const handleDelete = () => { if (confirm("삭제하시겠습니까?")) { const newBeans = beans.filter(b => String(b.id) !== String(selectedId)); if (safeStorage.set(`${STORAGE_KEY}_data`, newBeans)) { setBeans(newBeans); updateView(VIEW.LIST); } } };
         const handleDeleteTasting = () => { if (confirm("삭제?")) { const newBeans = beans.map(b => { if (String(b.id) === String(selectedId)) { return { ...b, tastings: b.tastings.filter((_, i) => i !== editTastingIdx) }; } return b; }); saveData(newBeans, selectedId, false); } };
         const updateScore = (id, delta) => { setTastingForm(prev => { let nextVal = prev.scores[id] + delta; if (nextVal < 0) nextVal = 0; if (nextVal > 10) nextVal = 10; nextVal = Math.round(nextVal * 10) / 10; return { ...prev, scores: { ...prev.scores, [id]: nextVal } }; }); };
+        
+        const handleTextShare = async (bean, tasting) => {
+            const score = getDisplayScore(tasting);
+            const text = `[BeanLog 시음 기록]
+원두: ${bean.name}
+국가: ${bean.country || '-'} / 지역: ${bean.region || '-'}
+가공: ${bean.processing || '-'} / 로스팅: ${bean.roastingLevel || '-'} (${bean.roastingDate || '-'})
+구매처: ${bean.shop || '-'}
+
+날짜: ${tasting.date}
+평점: ${score}
+노트: ${tasting.notes || '-'}
+평가: ${tasting.desc || '-'}
+메모: ${tasting.memo || '-'}`;
+
+            if (navigator.share) {
+                try { await navigator.share({ text }); } catch (e) { console.log(e); }
+            } else {
+                try { await navigator.clipboard.writeText(text); showToastMsg("텍스트가 복사되었습니다."); } catch (e) { showToastMsg("복사 실패"); }
+            }
+            setTastingMenuIdx(null);
+        };
+
+        const handleDeleteTastingItem = (idx) => {
+            if (confirm("이 시음 기록을 삭제하시겠습니까?")) {
+                const newBeans = beans.map(b => {
+                    if (String(b.id) === String(selectedId)) {
+                        const newTastings = b.tastings.filter((_, i) => i !== idx);
+                        return { ...b, tastings: newTastings };
+                    }
+                    return b;
+                });
+                saveData(newBeans, selectedId, false);
+                setTastingMenuIdx(null);
+            }
+        };
+
+        const handleTouchStart = (idx) => { isLongPress.current = false; longPressTimer.current = setTimeout(() => { isLongPress.current = true; setTastingMenuIdx(idx); if (navigator.vibrate) navigator.vibrate(50); }, 600); };
+        const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+
         const handleShopChange = (e) => { const val = e.target.value; setBeanForm(prev => ({ ...prev, shop: val })); if (!beanForm.purchaseUrl) { const match = beans.find(b => b.shop && b.shop.toLowerCase() === val.toLowerCase() && b.purchaseUrl); if (match) { setBeanForm(prev => ({ ...prev, purchaseUrl: match.purchaseUrl })); showToastMsg(`URL 자동 입력: ${match.shop}`); } } };
         const sortedBeans = useMemo(() => { let result = beans; if (filterMode === 'BEAN') result = result.filter(b => b.weight); else if (filterMode === 'CUP') result = result.filter(b => b.pricePerCup); if (searchTerm.trim()) { const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0); result = result.filter(bean => { const text = [bean.name, bean.country, bean.region, bean.variety, bean.processing, bean.roastingLevel, bean.shop, bean.notes, bean.flavorDesc, bean.memo, ...(bean.tastings ? bean.tastings.map(t => `${t.notes} ${t.memo}`) : [])].join(" ").toLowerCase(); return terms.every(t => text.includes(t)); }); } return [...result].sort((a, b) => { switch (sortMode) { case SORT_MODE.PURCHASE_DESC: if (!a.purchaseDate) return 1; if (!b.purchaseDate) return -1; return b.purchaseDate.localeCompare(a.purchaseDate); case SORT_MODE.ROAST_DESC: if (!a.roastingDate) return 1; if (!b.roastingDate) return -1; return b.roastingDate.localeCompare(a.roastingDate); case SORT_MODE.SCORE_DESC: const scoreA = getMaxScoreVal(a.tastings); const scoreB = getMaxScoreVal(b.tastings); if (scoreA !== scoreB) return scoreB - scoreA; return b.id - a.id; case SORT_MODE.STATUS_ASC: const getRank = (item) => { const isBean = !!item.weight; if (isBean) return item.isFinished ? 1 : 0; return 2; }; const rankA = getRank(a); const rankB = getRank(b); if (rankA !== rankB) return rankA - rankB; return b.id - a.id; case SORT_MODE.CREATED_DESC: default: return b.id - a.id; } }); }, [beans, searchTerm, filterMode, sortMode]);
 
         if(!active) return null;
 
         return (
-            <div className={`h-full flex flex-col bg-slate-50 relative ${active ? 'block' : 'hidden'}`}>
+            <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 relative ${active ? 'block' : 'hidden'}`}>
                 {/* ... BeansTab Content ... */}
                 {cropImage && <ImageCropper imageSrc={cropImage} aspectRatio={cropRatio} onComplete={onCropFinish} onCancel={() => setCropImage(null)} />}
                 {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
                 {showFlavorPicker && (<FlavorPicker onClose={() => setShowFlavorPicker(false)} onConfirm={(text) => { if (pickerTarget === 'bean') { setBeanForm(prev => ({ ...prev, notes: text })); } else if (pickerTarget === 'tasting') { setTastingForm(prev => ({ ...prev, notes: text })); } setShowFlavorPicker(false); }} initialNotes={pickerTarget === 'bean' ? beanForm.notes : tastingForm.notes} />)}
                 
                 {showRandomPopup && randomBean && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" onClick={() => window.history.back()}>
-                        <div className="w-full max-w-xs bg-white rounded-3xl shadow-2xl relative overflow-hidden animate-[scaleIn_0.2s_ease-out]" style={{ animation: 'pop 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
-                            <div className="bg-amber-50 p-4 flex justify-between items-center border-b border-amber-100">
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/40 dark:bg-black/70 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]" onClick={() => window.history.back()}>
+                        <div className="w-full max-w-xs bg-white dark:bg-slate-900 rounded-3xl shadow-2xl relative overflow-hidden animate-[scaleIn_0.2s_ease-out]" style={{ animation: 'pop 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} onClick={e => e.stopPropagation()}>
+                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 flex justify-between items-center border-b border-amber-100 dark:border-amber-900/30">
                                 <div className="flex items-center gap-1.5 text-amber-600"><Sparkles size={16} fill="currentColor" /><span className="text-xs font-bold uppercase tracking-wider">Today's Pick</span></div>
-                                <button onClick={() => window.history.back()} className="bg-white text-slate-400 p-1.5 rounded-full hover:bg-slate-100 transition-colors"><X size={16}/></button>
+                                <button onClick={() => window.history.back()} className="bg-white dark:bg-slate-800 text-slate-400 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"><X size={16}/></button>
                             </div>
                             <div className="p-6 pt-5 text-center flex flex-col items-center gap-1">
-                                <h2 className="text-xl font-black text-slate-900 leading-tight mb-1 break-keep word-keep">{randomBean.name}</h2>
-                                <div className="flex flex-wrap justify-center gap-1.5 mb-4">{randomBean.country && <span className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-[10px] font-bold border border-slate-200">{randomBean.country}</span>}{randomBean.roastingLevel && <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded text-[10px] font-bold border border-amber-100">{randomBean.roastingLevel}</span>}</div>
+                                <h2 className="text-xl font-black text-slate-900 dark:text-white leading-tight mb-1 break-keep word-keep">{randomBean.name}</h2>
+                                <div className="flex flex-wrap justify-center gap-1.5 mb-4">{randomBean.country && <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700">{randomBean.country}</span>}{randomBean.roastingLevel && <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded text-[10px] font-bold border border-amber-100 dark:border-amber-900/30">{randomBean.roastingLevel}</span>}</div>
                                 {randomBean.notes && (<p className="text-xs text-slate-400 mb-6 line-clamp-1">"{randomBean.notes}"</p>)}
-                                <button onClick={() => { setShowRandomPopup(false); replaceView(VIEW.DETAIL, randomBean.id); }} className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-lg shadow-slate-200">상세 정보 보기</button>
+                                <button onClick={() => { setShowRandomPopup(false); replaceView(VIEW.DETAIL, randomBean.id); }} className="px-6 py-2.5 bg-slate-900 dark:bg-slate-100 hover:bg-slate-800 dark:hover:bg-slate-200 text-white dark:text-slate-900 rounded-xl text-xs font-bold transition-all active:scale-95 shadow-lg shadow-slate-200 dark:shadow-none">상세 정보 보기</button>
                             </div>
                         </div>
                     </div>
@@ -710,28 +814,28 @@
 
                 {view === VIEW.LIST && (
                     <>
-                        <header className="p-5 pb-3 pt-4 bg-white border-b sticky top-0 z-10 bg-white/90 backdrop-blur space-y-3">
+                        <header className="p-5 pb-3 pt-4 bg-white dark:bg-slate-900 border-b dark:border-slate-800 sticky top-0 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur space-y-3">
                             <div className="flex justify-between items-center">
-                                <div><h1 className="text-2xl font-black font-brand flex items-center gap-1">BeanLog <CustomBeanIcon size={24} className="text-[#4b2c20]"/></h1><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-brand">Coffee bean archive</p></div>
+                                <div><h1 className="text-2xl font-black font-brand flex items-center gap-1 dark:text-white">BeanLog <CustomBeanIcon size={24} className="text-[#4b2c20] dark:text-amber-500"/></h1><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-brand">Coffee bean archive</p></div>
                                 <div className="flex gap-2">
-                                    <button onClick={pickRandomBean} className="w-10 h-10 bg-amber-50 text-amber-600 rounded-full flex items-center justify-center border border-amber-100 active:scale-95 transition-transform"><Sparkles size={18}/></button>
-                                    <button onClick={() => { setBeanForm({ ...INITIAL_BEAN }); setTempOcrImage(null); updateView(VIEW.EDIT_BEAN); }} className="w-10 h-10 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center hover:bg-slate-200 active:scale-95 transition-all"><Plus size={20}/></button>
+                                    <button onClick={pickRandomBean} className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center border border-amber-100 dark:border-amber-900/30 active:scale-95 transition-transform"><Sparkles size={18}/></button>
+                                    <button onClick={() => { setBeanForm({ ...INITIAL_BEAN }); setTempOcrImage(null); updateView(VIEW.EDIT_BEAN); }} className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all"><Plus size={20}/></button>
                                 </div>
                             </div>
-                            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full bg-slate-100 p-3 pl-10 rounded-2xl text-sm font-bold outline-none" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />{searchTerm && <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} fill="currentColor" className="text-slate-300"/></button>}</div>
-                            <div className="flex gap-2"><div className="flex-1 flex bg-slate-100 p-1 rounded-xl">{["ALL", "BEAN", "CUP"].map(mode => (<button key={mode} onClick={() => setFilterMode(mode)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filterMode === mode ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-400'}`}>{mode === 'ALL' ? '전체' : (mode === 'BEAN' ? '원두' : '한잔')}</button>))}</div><button onClick={() => { const newMode = listNoteMode === NOTE_MODE.BEAN ? NOTE_MODE.TASTING : NOTE_MODE.BEAN; setListNoteMode(newMode); safeStorage.set(`${STORAGE_KEY}_note_mode`, newMode); showToastMsg(newMode === NOTE_MODE.BEAN ? "원두 노트 보기" : "시음 노트 보기"); }} className="px-3 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center transition-colors hover:bg-slate-200">{listNoteMode === NOTE_MODE.BEAN ? <CustomBeanIcon size={18}/> : <Coffee size={18}/>}</button><div className="relative"><button onClick={() => setShowSortMenu(!showSortMenu)} className={`h-full px-3 rounded-xl flex items-center justify-center transition-colors ${showSortMenu ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500'}`}><ArrowUpDown size={16} /></button>{showSortMenu && (<><div className="fixed inset-0 z-20" onClick={() => setShowSortMenu(false)}></div><div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-2xl shadow-2xl border p-2 z-30 flex flex-col gap-1 animate-in slide-in-from-top-2"><div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b mb-1">Sort By</div>{[SORT_MODE.CREATED_DESC, SORT_MODE.PURCHASE_DESC, SORT_MODE.ROAST_DESC, SORT_MODE.SCORE_DESC, SORT_MODE.STATUS_ASC].map(mode => (<button key={mode} onClick={() => { setSortMode(mode); safeStorage.set(`${STORAGE_KEY}_sort_mode`, mode); setShowSortMenu(false); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${sortMode === mode ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}><span>{SORT_LABELS[mode]}</span> {sortMode === mode && <Check size={14}/>}</button>))}</div></>)}</div></div>
+                            <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 pl-10 rounded-2xl text-sm font-bold outline-none" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />{searchTerm && <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} fill="currentColor" className="text-slate-300"/></button>}</div>
+                            <div className="flex gap-2"><div className="flex-1 flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">{["ALL", "BEAN", "CUP"].map(mode => (<button key={mode} onClick={() => setFilterMode(mode)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filterMode === mode ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400'}`}>{mode === 'ALL' ? '전체' : (mode === 'BEAN' ? '원두' : '한잔')}</button>))}</div><button onClick={() => { const newMode = listNoteMode === NOTE_MODE.BEAN ? NOTE_MODE.TASTING : NOTE_MODE.BEAN; setListNoteMode(newMode); safeStorage.set(`${STORAGE_KEY}_note_mode`, newMode); showToastMsg(newMode === NOTE_MODE.BEAN ? "원두 노트 보기" : "시음 노트 보기"); }} className="px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">{listNoteMode === NOTE_MODE.BEAN ? <CustomBeanIcon size={18}/> : <Coffee size={18}/>}</button><div className="relative"><button onClick={() => setShowSortMenu(!showSortMenu)} className={`h-full px-3 rounded-xl flex items-center justify-center transition-colors ${showSortMenu ? 'bg-slate-900 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><ArrowUpDown size={16} /></button>{showSortMenu && (<><div className="fixed inset-0 z-20" onClick={() => setShowSortMenu(false)}></div><div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border dark:border-slate-700 p-2 z-30 flex flex-col gap-1 animate-in slide-in-from-top-2"><div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b dark:border-slate-700 mb-1">Sort By</div>{[SORT_MODE.CREATED_DESC, SORT_MODE.PURCHASE_DESC, SORT_MODE.ROAST_DESC, SORT_MODE.SCORE_DESC, SORT_MODE.STATUS_ASC].map(mode => (<button key={mode} onClick={() => { setSortMode(mode); safeStorage.set(`${STORAGE_KEY}_sort_mode`, mode); setShowSortMenu(false); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${sortMode === mode ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><span>{SORT_LABELS[mode]}</span> {sortMode === mode && <Check size={14}/>}</button>))}</div></>)}</div></div>
                             {sortMode !== SORT_MODE.CREATED_DESC && <div className="flex justify-end"><span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded flex items-center gap-1">{SORT_LABELS[sortMode]} 정렬 중 <ArrowUpDown size={10}/></span></div>}
                         </header>
                         <main className="flex-1 p-4 space-y-4 overflow-y-auto pb-24" ref={mainRef}>
                             {sortedBeans.length === 0 ? <div className="py-20 text-center opacity-40 font-bold">{searchTerm ? "검색 결과 없음" : "기록이 없습니다"}</div> : sortedBeans.map(bean => (
-                                <div key={bean.id} onClick={() => { updateView(VIEW.DETAIL, bean.id); }} className="bg-white p-4 rounded-3xl shadow-sm border flex items-start gap-4 active:scale-95 transition-transform">
+                                <div key={bean.id} onClick={() => { updateView(VIEW.DETAIL, bean.id); }} className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border dark:border-slate-800 flex items-start gap-4 active:scale-95 transition-transform">
                                     <div className="flex flex-col items-center gap-1.5 shrink-0">
-                                        <div className={`w-16 h-16 rounded-xl bg-slate-100 overflow-hidden relative flex items-center justify-center ${bean.isFinished ? 'text-slate-300' : 'text-amber-800'}`}>{bean.mainImage ? <img src={bean.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={32}/>}</div>
-                                        <div className="flex items-center gap-1">{bean.tastings.length > 0 && (<span className="bg-amber-50 text-amber-700 px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-0.5 border border-amber-100"><Star size={8} fill="currentColor"/> {getMaxScore(bean.tastings)}</span>)}{bean.isFinished ? <CustomBeanIcon size={14} className="text-slate-300"/> : (bean.weight ? <CustomBeanIcon size={14} className="text-amber-700"/> : <Coffee size={14} className="text-slate-700"/>)}</div>
+                                        <div className={`w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden relative flex items-center justify-center ${bean.isFinished ? 'text-slate-300 dark:text-slate-600' : 'text-amber-800 dark:text-amber-500'}`}>{bean.mainImage ? <img src={bean.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={32}/>}</div>
+                                        <div className="flex items-center gap-1">{bean.tastings.length > 0 && (<span className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-0.5 border border-amber-100 dark:border-amber-900/30"><Star size={8} fill="currentColor"/> {getMaxScore(bean.tastings)}</span>)}{bean.isFinished ? <CustomBeanIcon size={14} className="text-slate-300 dark:text-slate-600"/> : (bean.weight ? <CustomBeanIcon size={14} className="text-amber-700 dark:text-amber-500"/> : <Coffee size={14} className="text-slate-700 dark:text-slate-400"/>)}</div>
                                     </div>
                                     <div className="flex-1 min-w-0 space-y-1">
-                                        <h3 className="font-black text-lg break-words leading-tight text-slate-900">{bean.name}</h3>
-                                        <div className="text-xs text-slate-500 font-medium whitespace-normal leading-relaxed break-words"><span className="font-bold text-slate-700">{bean.shop || "-"}</span><span className="mx-1">·</span>{bean.roastingLevel || "-"}<span className="mx-1">·</span>{bean.purchaseDate || "-"}</div>
+                                        <h3 className="font-black text-lg break-words leading-tight text-slate-900 dark:text-slate-100">{bean.name}</h3>
+                                        <div className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-normal leading-relaxed break-words"><span className="font-bold text-slate-700 dark:text-slate-300">{bean.shop || "-"}</span><span className="mx-1">·</span>{bean.roastingLevel || "-"}<span className="mx-1">·</span>{bean.purchaseDate || "-"}{bean.weight && bean.roastingDate && <><span className="mx-1">·</span><span className="text-amber-600 dark:text-amber-500 font-bold">{getRoastAge(bean.roastingDate)}</span></>}</div>
                                         <div className="text-slate-400 text-xs mt-1 leading-tight line-clamp-2">{parseTags(listNoteMode === NOTE_MODE.TASTING ? (getBestTastingNote(bean.tastings) || bean.notes) : bean.notes).join(', ')}</div>
                                     </div>
                                 </div>
@@ -741,47 +845,117 @@
                 )}
 
                 {view === VIEW.DETAIL && activeBean && (
-                    <div className="flex flex-col h-full bg-white">
-                        <header className="p-4 pt-4 border-b flex justify-between items-center sticky top-0 z-10 bg-white"><button onClick={goBack} className="p-2"><ChevronLeft/></button><span className="font-bold text-xs uppercase tracking-widest text-slate-400">Detail</span><button onClick={() => { setBeanForm({ ...activeBean }); setTempOcrImage(null); updateView(VIEW.EDIT_BEAN, activeBean.id); }} className="text-sm font-bold underline px-2">수정</button></header>
+                    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+                        <header className="p-4 pt-4 border-b dark:border-slate-800 flex justify-between items-center sticky top-0 z-10 bg-white dark:bg-slate-900"><button onClick={goBack} className="p-2"><ChevronLeft/></button><span className="font-bold text-xs uppercase tracking-widest text-slate-400">Detail</span><button onClick={() => { setBeanForm({ ...activeBean }); setTempOcrImage(null); updateView(VIEW.EDIT_BEAN, activeBean.id); }} className="text-sm font-bold underline px-2">수정</button></header>
                         <main className="flex-1 overflow-y-auto pb-24" ref={mainRef}>
                             <div className="p-6 pb-0">
-                                <div className="flex items-center gap-2 mb-4"><h1 className="text-3xl font-black leading-tight break-words">{activeBean.name}</h1>{activeBean.isFinished && <span className="bg-slate-200 text-slate-500 text-[10px] font-bold px-2 py-0.5 rounded h-fit whitespace-nowrap">SOLD OUT</span>}</div>
+                                <div className="flex items-center gap-2 mb-4"><h1 className="text-3xl font-black leading-tight break-words dark:text-white">{activeBean.name}</h1>{activeBean.isFinished && <span className="bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded h-fit whitespace-nowrap">SOLD OUT</span>}</div>
                                 <div className="flex gap-4 items-start">
-                                    <div className="w-1/2 aspect-square bg-slate-100 relative rounded-2xl overflow-hidden shadow-sm shrink-0">{activeBean.mainImage ? <img src={activeBean.mainImage} className="w-full h-full object-cover"/> : <div className={`absolute inset-0 flex items-center justify-center ${activeBean.isFinished ? 'text-slate-300' : 'text-amber-800'}`}><CustomBeanIcon size={96}/></div>}</div>
-                                    <div className="w-1/2 flex flex-wrap content-start gap-1.5">{activeBean.country && <span className="bg-slate-900 text-white px-2 py-1 rounded text-[10px] font-bold">{activeBean.country}</span>}{activeBean.region && <span className="bg-slate-100 text-slate-700 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">{activeBean.region}</span>}{activeBean.variety && <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">{activeBean.variety}</span>}{activeBean.processing && <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">{activeBean.processing}</span>}{activeBean.producer && <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">{activeBean.producer}</span>}{activeBean.altitude && <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded text-[10px] font-bold border border-slate-200">{activeBean.altitude}</span>}{activeBean.roastingLevel && <span className="bg-amber-100 text-amber-900 px-2 py-1 rounded text-[10px] font-bold border border-amber-200">{activeBean.roastingLevel}</span>}{activeBean.roastingDate && <span className="bg-slate-50 text-slate-500 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 flex items-center gap-1"><Flame size={8} className="text-orange-500"/> {activeBean.roastingDate}</span>}</div>
+                                    <div className="w-1/2 aspect-square bg-slate-100 dark:bg-slate-800 relative rounded-2xl overflow-hidden shadow-sm shrink-0">{activeBean.mainImage ? <img src={activeBean.mainImage} className="w-full h-full object-cover"/> : <div className={`absolute inset-0 flex items-center justify-center ${activeBean.isFinished ? 'text-slate-300 dark:text-slate-600' : 'text-amber-800 dark:text-amber-500'}`}><CustomBeanIcon size={96}/></div>}</div>
+                                    <div className="w-1/2 flex flex-wrap content-start gap-1.5">
+                                        {activeBean.isBlend && activeBean.blendInfo && activeBean.blendInfo.length > 0 ? (
+                                            <div className="w-full space-y-1">
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Blend Info</span>
+                                                {activeBean.blendInfo.map((info, i) => (
+                                                    <div key={i} className="flex items-center gap-1.5 text-[11px] bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded border border-slate-100 dark:border-slate-700">
+                                                        {info.country && <span className="font-bold dark:text-slate-200">{getFlagEmoji(info.country)} {info.country}</span>}
+                                                        {info.variety && <span className="text-slate-500 dark:text-slate-400">{info.variety}</span>}
+                                                        {info.ratio && <span className="font-mono text-amber-600 dark:text-amber-500 font-bold ml-auto">{info.ratio}%</span>}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {activeBean.country && <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-2 py-1 rounded text-[10px] font-bold flex items-center gap-1">{getFlagEmoji(activeBean.country) ? <span className="text-[11px] leading-none">{getFlagEmoji(activeBean.country)}</span> : <MapPin size={10} />} {activeBean.country}</span>}
+                                                {activeBean.region && <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1"><MapPin size={10} /> {activeBean.region}</span>}
+                                                {activeBean.variety && <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1"><Tag size={10} /> {activeBean.variety}</span>}
+                                                {activeBean.processing && <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1"><Layers size={10} /> {activeBean.processing}</span>}
+                                                {activeBean.producer && <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1"><User size={10} /> {activeBean.producer}</span>}
+                                                {activeBean.altitude && <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1"><Mountain size={10} /> {activeBean.altitude}</span>}
+                                            </>
+                                        )}
+                                        {activeBean.roastingLevel && <span className="bg-amber-100 dark:bg-amber-900/20 text-amber-900 dark:text-amber-400 px-2 py-1 rounded text-[10px] font-bold border border-amber-200 dark:border-amber-900/30 flex items-center gap-1"><Flame size={10} /> {activeBean.roastingLevel}</span>}
+                                        {activeBean.weight && activeBean.roastingDate && <span className="bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-1 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-1"><Calendar size={10} className="text-slate-400"/> {activeBean.roastingDate}</span>}
+                                        {activeBean.weight && activeBean.roastingDate && <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-2 py-1 rounded text-[10px] font-bold border border-amber-100 dark:border-amber-900/30 flex items-center gap-1">Roast {getRoastAge(activeBean.roastingDate)}</span>}
+                                    </div>
                                 </div>
                             </div>
                             <div className="p-6 space-y-6">
-                                {(activeBean.notes || activeBean.flavorDesc) && (<div className="bg-amber-50 p-5 rounded-2xl border border-amber-100 relative"><Quote size={20} className="absolute top-4 right-4 text-amber-200 opacity-50" /><span className="text-[10px] font-bold text-amber-500 uppercase block mb-3">Flavor Notes</span><div className="flex flex-wrap gap-2 mb-3">{parseTags(activeBean.notes).map((note, idx) => (<span key={idx} className="bg-white text-amber-800 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-100 shadow-sm">{note}</span>))}</div>{activeBean.flavorDesc && <p className="text-amber-900 text-sm font-medium italic leading-relaxed border-t border-amber-200 pt-3 mt-2">{activeBean.flavorDesc}</p>}</div>)}
-                                <div className="bg-white border border-slate-100 p-5 rounded-3xl shadow-sm space-y-3"><div className="flex justify-between items-center"><h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><ShoppingBag size={12}/> Purchase Info</h3>{activeBean.purchaseUrl && (<button onClick={() => openLink(activeBean.purchaseUrl)} className="text-[10px] font-bold text-blue-500 bg-blue-50 px-2 py-1 rounded-lg flex items-center gap-1">구매처 방문 <ExternalLink size={10}/></button>)}</div><div className="flex justify-between items-center text-sm font-medium"><span>구매처</span> <span className="font-bold">{activeBean.shop || '-'}</span></div><div className="flex justify-between items-center text-sm font-medium"><span>구매일</span> <span className="font-bold">{activeBean.purchaseDate || '-'}</span></div>{activeBean.weight && activeBean.price && (<div className="flex justify-between items-center text-sm font-medium"><span>가격 ({activeBean.weight}g)</span> <div className="text-right"><span className="font-bold block">{Number(activeBean.price).toLocaleString()}원</span><span className="text-[10px] text-slate-400">100g당 {calcPricePer100g(activeBean.price, activeBean.weight)}원</span></div></div>)}{activeBean.pricePerCup && (<div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-dashed"><span>한 잔 가격</span> <span className="font-bold text-amber-700">{Number(activeBean.pricePerCup).toLocaleString()}원</span></div>)}</div>
-                                {activeBean.memo && <div className="bg-slate-50 p-5 rounded-2xl border text-slate-600 text-sm whitespace-pre-wrap">{activeBean.memo}</div>}
-                                <div className="pt-6 border-t"><div className="flex justify-between items-center mb-4"><h2 className="font-black text-xl">시음 기록</h2><div className="flex gap-2"><button onClick={() => { const updatedBeans = beans.map(b => String(b.id) === String(activeBean.id) ? { ...b, isFinished: !b.isFinished } : b); if(safeStorage.set(`${STORAGE_KEY}_data`, updatedBeans)) { setBeans(updatedBeans); } }} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${activeBean.isFinished ? 'bg-slate-200 text-slate-500 border-transparent' : 'bg-white text-slate-700 border-slate-200'}`}>{activeBean.isFinished ? "원두 소진됨" : "원두 보유 중"}</button><button onClick={() => { setTastingForm({...INITIAL_TASTING}); setEditTastingIdx(null); updateView(VIEW.EDIT_TASTING, activeBean.id); }} className="bg-slate-900 text-white px-3 py-1.5 rounded-full text-xs font-bold">+ 추가</button></div></div>{activeBean.tastings.length === 0 ? <p className="text-center text-slate-400 text-xs py-4">기록이 없습니다.</p> : (<div className="space-y-3">{activeBean.tastings.map((t, idx) => (<div key={idx} className="bg-slate-50 p-4 rounded-2xl border flex items-center gap-4 active:scale-95 cursor-pointer" onClick={() => { setTastingForm(t); setEditTastingIdx(idx); updateView(VIEW.EDIT_TASTING, activeBean.id); }}><div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-black border text-sm">{getDisplayScore(t)}</div><div className="flex-1 min-w-0"><p className="font-bold text-sm mb-1">{t.date}</p><div className="flex flex-wrap gap-1">{t.notes ? parseTags(t.notes).map((n, i) => <span key={i} className="text-[10px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border">{n}</span>) : <span className="text-xs text-slate-300">노트 없음</span>}</div></div><button onClick={(e) => { e.stopPropagation(); setShareData({ bean: activeBean, tasting: t }); }} className="p-2 text-slate-300 hover:text-slate-500 hover:bg-slate-200 rounded-full transition-colors"><Share2 size={16}/></button></div>))}</div>)}</div>
+                                {(activeBean.notes || activeBean.flavorDesc) && (<div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-2xl border border-amber-100 dark:border-amber-900/30 relative"><Quote size={20} className="absolute top-4 right-4 text-amber-200 dark:text-amber-800 opacity-50" /><span className="text-[10px] font-bold text-amber-500 uppercase block mb-3">Flavor Notes</span><div className="flex flex-wrap gap-2 mb-3">{parseTags(activeBean.notes).map((note, idx) => (<span key={idx} className="bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-400 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-100 dark:border-amber-900/30 shadow-sm">{note}</span>))}</div>{activeBean.flavorDesc && <p className="text-amber-900 dark:text-amber-200 text-sm font-medium italic leading-relaxed border-t border-amber-200 dark:border-amber-900/30 pt-3 mt-2">{activeBean.flavorDesc}</p>}</div>)}
+                                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-3"><div className="flex justify-between items-center"><h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><ShoppingBag size={12}/> Purchase Info</h3>{activeBean.purchaseUrl && (<button onClick={() => openLink(activeBean.purchaseUrl)} className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg flex items-center gap-1">구매처 방문 <ExternalLink size={10}/></button>)}</div><div className="flex justify-between items-center text-sm font-medium dark:text-slate-300"><span>구매처</span> <span className="font-bold dark:text-white">{activeBean.shop || '-'}</span></div><div className="flex justify-between items-center text-sm font-medium dark:text-slate-300"><span>구매일</span> <span className="font-bold dark:text-white">{activeBean.purchaseDate || '-'}</span></div>{activeBean.weight && activeBean.price && (<div className="flex justify-between items-center text-sm font-medium dark:text-slate-300"><span>가격 ({activeBean.weight}g)</span> <div className="text-right"><span className="font-bold block dark:text-white">{Number(activeBean.price).toLocaleString()}원</span><span className="text-[10px] text-slate-400">100g당 {calcPricePer100g(activeBean.price, activeBean.weight)}원</span></div></div>)}{activeBean.pricePerCup && (<div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-dashed dark:border-slate-800 dark:text-slate-300"><span>한 잔 가격</span> <span className="font-bold text-amber-700 dark:text-amber-500">{Number(activeBean.pricePerCup).toLocaleString()}원</span></div>)}</div>
+                                {activeBean.memo && <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm whitespace-pre-wrap">{activeBean.memo}</div>}
+                                <div className="pt-6 border-t dark:border-slate-800"><div className="flex justify-between items-center mb-4"><h2 className="font-black text-xl dark:text-white">시음 기록</h2><div className="flex gap-2"><button onClick={() => { const updatedBeans = beans.map(b => String(b.id) === String(activeBean.id) ? { ...b, isFinished: !b.isFinished } : b); if(safeStorage.set(`${STORAGE_KEY}_data`, updatedBeans)) { setBeans(updatedBeans); } }} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${activeBean.isFinished ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-transparent' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>{activeBean.isFinished ? "원두 소진됨" : "원두 보유 중"}</button><button onClick={() => { setTastingForm({...INITIAL_TASTING}); setEditTastingIdx(null); updateView(VIEW.EDIT_TASTING, activeBean.id); }} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-3 py-1.5 rounded-full text-xs font-bold">+ 추가</button></div></div>{activeBean.tastings.length === 0 ? <p className="text-center text-slate-400 text-xs py-4">기록이 없습니다.</p> : (<div className="space-y-3">{activeBean.tastings.map((t, idx) => (
+                                    <div key={idx} 
+                                        className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 flex items-center gap-4 active:scale-95 cursor-pointer relative overflow-hidden select-none" 
+                                        onTouchStart={() => handleTouchStart(idx)} onTouchEnd={handleTouchEnd} onMouseDown={() => handleTouchStart(idx)} onMouseUp={handleTouchEnd} onMouseLeave={handleTouchEnd}
+                                        onContextMenu={(e) => { e.preventDefault(); setTastingMenuIdx(idx); }}
+                                        onClick={() => { if (isLongPress.current) return; if (tastingMenuIdx !== null) { setTastingMenuIdx(null); return; } setTastingForm(t); setEditTastingIdx(idx); updateView(VIEW.EDIT_TASTING, activeBean.id); }}
+                                    >
+                                        <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center font-black border dark:border-slate-700 text-sm dark:text-white">{getDisplayScore(t)}</div>
+                                        <div className="flex-1 min-w-0"><p className="font-bold text-sm mb-1 dark:text-white">{t.date}</p><div className="flex flex-wrap gap-1">{t.notes ? parseTags(t.notes).map((n, i) => <span key={i} className="text-[10px] bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 px-1.5 py-0.5 rounded border dark:border-slate-600">{n}</span>) : <span className="text-xs text-slate-300">노트 없음</span>}</div></div>
+                                        {tastingMenuIdx === idx && (
+                                            <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" 
+                                                onClick={(e) => e.stopPropagation()}
+                                                onMouseDown={(e) => e.stopPropagation()}
+                                                onTouchStart={(e) => e.stopPropagation()}
+                                            >
+                                                <button onClick={(e) => { e.stopPropagation(); setShareData({ bean: activeBean, tasting: t }); setTastingMenuIdx(null); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div><span className="text-[10px] font-bold">이미지 공유</span></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleTextShare(activeBean, t); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><FileText size={20}/></div><span className="text-[10px] font-bold">텍스트 공유</span></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleDeleteTastingItem(idx); }} className="flex flex-col items-center text-red-400 gap-1"><div className="p-2 bg-red-900/20 rounded-full"><Trash2 size={20}/></div><span className="text-[10px] font-bold">삭제</span></button>
+                                                <button onClick={(e) => { e.stopPropagation(); setTastingMenuIdx(null); }} className="absolute top-0 right-0 p-4 text-slate-500 hover:text-slate-300"><X size={20}/></button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}</div>)}</div>
                             </div>
                         </main>
                     </div>
                 )}
 
                 {view === VIEW.EDIT_BEAN && (
-                    <div className="flex flex-col h-full bg-white">
-                        <header className="p-4 pt-4 border-b flex justify-between items-center sticky top-0 z-10 bg-white"><button onClick={() => { goBack(); }} className="p-2"><ChevronLeft/></button><h1 className="font-black">원두 입력</h1><button onClick={handleSaveBean} disabled={isSaving} className="bg-slate-900 text-white px-4 py-2 rounded-full text-xs font-bold disabled:bg-slate-300">{isSaving ? '저장...' : '완료'}</button></header>
+                    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+                        <header className="p-4 pt-4 border-b dark:border-slate-800 flex justify-between items-center sticky top-0 z-10 bg-white dark:bg-slate-900"><button onClick={() => { goBack(); }} className="p-2"><ChevronLeft/></button><h1 className="font-black dark:text-white">원두 입력</h1><button onClick={handleSaveBean} disabled={isSaving} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-full text-xs font-bold disabled:bg-slate-300 dark:disabled:bg-slate-700">{isSaving ? '저장...' : '완료'}</button></header>
                         <main className="flex-1 overflow-y-auto p-6 space-y-6 pb-64">
-                            <div className="flex gap-4"><label className="flex-1 aspect-square bg-slate-100 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed relative overflow-hidden active:scale-95 transition-transform">{beanForm.mainImage ? <img src={beanForm.mainImage} className="w-full h-full object-cover"/> : <><Camera size={24} className="text-slate-400"/><span className="text-[10px] font-bold text-slate-400 mt-1">대표사진</span></>}<input type="file" className="hidden" accept="image/*" onChange={(e) => onSelectFile(e, 'main')} /></label><label className="flex-1 aspect-square bg-blue-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-blue-200 relative overflow-hidden active:scale-95 transition-transform">{tempOcrImage ? <><img src={tempOcrImage} className="w-full h-full object-cover opacity-50"/><CheckCircle2 className="absolute text-blue-600" size={24}/></> : <><FileText size={24} className="text-blue-400"/><span className="text-[10px] font-bold text-blue-400 mt-1">OCR 분석용</span></>}<input type="file" className="hidden" accept="image/*" onChange={(e) => onSelectFile(e, 'ocr')} /></label></div><button onClick={runOCR} disabled={isProcessing} className="w-full py-3 bg-blue-100 text-blue-900 font-bold rounded-2xl flex items-center justify-center gap-2">{isProcessing ? <RefreshCw className="animate-spin" size={16}/> : <Zap size={16}/>} {isProcessing ? "분석 중..." : "AI 정보 자동 입력"}</button>
-                            <div className="space-y-4"><input className="w-full text-2xl font-black border-b py-2 outline-none" placeholder="원두 이름 (필수)" value={beanForm.name} onChange={e => setBeanForm({...beanForm, name: e.target.value})}/><div className="flex items-center gap-3 p-4 bg-slate-50 rounded-xl"><input type="checkbox" checked={beanForm.isFinished} onChange={e => setBeanForm({...beanForm, isFinished: e.target.checked})} className="w-5 h-5 accent-slate-900"/><label className="text-sm font-bold text-slate-700">원두 다 먹음 (Sold Out)</label></div><div className="grid grid-cols-2 gap-3"><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="나라 (Country)" value={beanForm.country} onChange={e => setBeanForm({...beanForm, country: e.target.value})}/><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="지역 (Region)" value={beanForm.region} onChange={e => setBeanForm({...beanForm, region: e.target.value})}/><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="품종" value={beanForm.variety} onChange={e => setBeanForm({...beanForm, variety: e.target.value})}/><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="가공 방식" value={beanForm.processing} onChange={e => setBeanForm({...beanForm, processing: e.target.value})}/><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="고도 (m)" value={beanForm.altitude} onChange={e => setBeanForm({...beanForm, altitude: e.target.value})}/><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="로스팅 포인트" value={beanForm.roastingLevel} onChange={e => setBeanForm({...beanForm, roastingLevel: e.target.value})}/></div><input className="w-full bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="생산자/농장" value={beanForm.producer} onChange={e => setBeanForm({...beanForm, producer: e.target.value})}/><div className="bg-slate-50 p-3 rounded-xl flex flex-col justify-center"><label className="text-[10px] font-bold text-slate-400 uppercase mb-1">로스팅 날짜</label><input type="date" className="bg-transparent font-bold outline-none w-full" value={beanForm.roastingDate} onChange={e => setBeanForm({...beanForm, roastingDate: e.target.value})}/></div><div className="space-y-3 pt-2"><h3 className="text-xs font-bold text-slate-400 uppercase">구매 정보</h3><div className="bg-slate-50 p-3 rounded-xl flex flex-col justify-center"><label className="text-[10px] font-bold text-slate-400 uppercase mb-1">구매일 (Purchase Date)</label><input type="date" className="bg-transparent font-bold outline-none w-full" value={beanForm.purchaseDate} onChange={e => setBeanForm({...beanForm, purchaseDate: e.target.value})}/></div><div className="space-y-1"><label className="text-xs font-bold text-slate-500 ml-1">구매처 (Shop)</label><div className="relative"><ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input list="shop-suggestions" className="w-full bg-slate-100 p-3 pl-10 rounded-xl text-sm font-bold outline-none" placeholder="예: Momos Coffee" value={beanForm.shop} onChange={handleShopChange}/><datalist id="shop-suggestions">{[...new Set(beans.map(b => b.shop).filter(Boolean))].map((shop, i) => (<option key={i} value={shop} />))}</datalist></div></div><input className="w-full bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="구매 URL (http://...)" value={beanForm.purchaseUrl} onChange={e => setBeanForm({...beanForm, purchaseUrl: e.target.value})}/><div className="grid grid-cols-2 gap-3"><div className="col-span-2"></div><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="용량 (g)" value={beanForm.weight} onChange={e => setBeanForm({...beanForm, weight: e.target.value})}/><input className="bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="가격 (원)" value={beanForm.price} onChange={e => setBeanForm({...beanForm, price: e.target.value})}/></div><input className="w-full bg-slate-50 p-3 rounded-xl text-sm font-bold outline-none" placeholder="한 잔 가격 (카페)" value={beanForm.pricePerCup} onChange={e => setBeanForm({...beanForm, pricePerCup: e.target.value})}/></div><div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Flavor Keywords</label><div className="relative"><input className="w-full bg-amber-50 p-4 pr-12 rounded-xl text-sm font-bold text-amber-900 outline-none placeholder-amber-900/30" placeholder="베리, 초콜릿 (콤마 구분)" value={beanForm.notes} onChange={e => setBeanForm({...beanForm, notes: e.target.value})}/><button onClick={() => { setPickerTarget('bean'); setShowFlavorPicker(true); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white rounded-lg shadow-sm text-amber-600 border border-amber-100"><Palette size={16}/></button></div></div><textarea className="w-full bg-amber-50 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 outline-none resize-none" placeholder="향미에 대한 자세한 설명 (줄글)" value={beanForm.flavorDesc} onChange={e => setBeanForm({...beanForm, flavorDesc: e.target.value})}/><textarea className="w-full bg-slate-50 p-4 rounded-2xl h-24 text-sm outline-none resize-none" placeholder="메모" value={beanForm.memo} onChange={e => setBeanForm({...beanForm, memo: e.target.value})}/></div>
-                            {selectedId && <button onClick={handleDelete} className="w-full py-4 text-red-500 font-bold bg-red-50 rounded-2xl flex items-center justify-center gap-2"><Trash2 size={18}/> 삭제</button>}
+                            <div className="flex gap-4"><label className="flex-1 aspect-square bg-slate-100 dark:bg-slate-800 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed dark:border-slate-700 relative overflow-hidden active:scale-95 transition-transform">{beanForm.mainImage ? <img src={beanForm.mainImage} className="w-full h-full object-cover"/> : <><Camera size={24} className="text-slate-400"/><span className="text-[10px] font-bold text-slate-400 mt-1">대표사진</span></>}<input type="file" className="hidden" accept="image/*" onChange={(e) => onSelectFile(e, 'main')} /></label><label className="flex-1 aspect-square bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-blue-200 dark:border-blue-900/30 relative overflow-hidden active:scale-95 transition-transform">{tempOcrImage ? <><img src={tempOcrImage} className="w-full h-full object-cover opacity-50"/><CheckCircle2 className="absolute text-blue-600" size={24}/></> : <><FileText size={24} className="text-blue-400"/><span className="text-[10px] font-bold text-blue-400 mt-1">OCR 분석용</span></>}<input type="file" className="hidden" accept="image/*" onChange={(e) => onSelectFile(e, 'ocr')} /></label></div><button onClick={runOCR} disabled={isProcessing} className="w-full py-3 bg-blue-100 dark:bg-blue-900/40 text-blue-900 dark:text-blue-300 font-bold rounded-2xl flex items-center justify-center gap-2">{isProcessing ? <RefreshCw className="animate-spin" size={16}/> : <Zap size={16}/>} {isProcessing ? "분석 중..." : "AI 정보 자동 입력"}</button>
+                            <div className="space-y-4"><input className="w-full text-2xl font-black border-b dark:border-slate-800 py-2 outline-none bg-transparent dark:text-white" placeholder="원두 이름 (필수)" value={beanForm.name} onChange={e => setBeanForm({...beanForm, name: e.target.value})}/>
+                            <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl"><input type="checkbox" checked={beanForm.isBlend} onChange={e => setBeanForm({...beanForm, isBlend: e.target.checked})} className="w-5 h-5 accent-slate-900"/><label className="text-sm font-bold text-slate-700 dark:text-slate-300">블렌드 원두 (Blend)</label></div>
+                            {beanForm.isBlend ? (
+                                <div className="space-y-3 bg-slate-50 dark:bg-slate-800 p-4 rounded-xl">
+                                    <div className="flex justify-between items-center"><h3 className="text-xs font-bold text-slate-400 uppercase">블렌딩 정보</h3><button onClick={addBlendInfo} className="text-xs font-bold text-blue-500">+ 추가</button></div>
+                                    {(beanForm.blendInfo || []).map((info, idx) => (
+                                        <div key={idx} className="relative border-t border-slate-200 dark:border-slate-700 pt-3 mt-3 first:border-t-0 first:pt-0 first:mt-0">
+                                            <div className="space-y-2">
+                                                <div className="flex gap-2">
+                                                    <input className="flex-1 bg-white dark:bg-slate-900 dark:text-white p-2 rounded-lg text-sm font-bold outline-none border border-slate-200 dark:border-slate-700" placeholder="국가" value={info.country} onChange={e => updateBlendInfo(idx, 'country', e.target.value)} />
+                                                    <input className="w-24 bg-white dark:bg-slate-900 dark:text-white p-2 rounded-lg text-sm font-bold outline-none border border-slate-200 dark:border-slate-700" placeholder="비율 (%)" value={info.ratio} onChange={e => updateBlendInfo(idx, 'ratio', e.target.value)} />
+                                                </div>
+                                                <input className="w-full bg-white dark:bg-slate-900 dark:text-white p-2 rounded-lg text-sm font-bold outline-none border border-slate-200 dark:border-slate-700" placeholder="품종" value={info.variety} onChange={e => updateBlendInfo(idx, 'variety', e.target.value)} />
+                                            </div>
+                                            <button onClick={() => removeBlendInfo(idx)} className="absolute top-3 right-0 p-1 text-slate-400 hover:text-red-500"><X size={14}/></button>
+                                        </div>
+                                    ))}
+                                    {(!beanForm.blendInfo || beanForm.blendInfo.length === 0) && <div className="text-center text-xs text-slate-400 py-2">블렌딩 정보를 추가해주세요.</div>}
+                                    <input className="w-full bg-white dark:bg-slate-900 dark:text-white p-3 rounded-xl text-sm font-bold outline-none border border-slate-200 dark:border-slate-700 mt-2" placeholder="로스팅 포인트" value={beanForm.roastingLevel} onChange={e => setBeanForm({...beanForm, roastingLevel: e.target.value})}/>
+                                </div>
+                            ) : (
+                                <><div className="grid grid-cols-2 gap-3"><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="나라 (Country)" value={beanForm.country} onChange={e => setBeanForm({...beanForm, country: e.target.value})}/><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="지역 (Region)" value={beanForm.region} onChange={e => setBeanForm({...beanForm, region: e.target.value})}/><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="품종" value={beanForm.variety} onChange={e => setBeanForm({...beanForm, variety: e.target.value})}/><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="가공 방식" value={beanForm.processing} onChange={e => setBeanForm({...beanForm, processing: e.target.value})}/><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="고도 (m)" value={beanForm.altitude} onChange={e => setBeanForm({...beanForm, altitude: e.target.value})}/><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="로스팅 포인트" value={beanForm.roastingLevel} onChange={e => setBeanForm({...beanForm, roastingLevel: e.target.value})}/></div><input className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="생산자/농장" value={beanForm.producer} onChange={e => setBeanForm({...beanForm, producer: e.target.value})}/></>
+                            )}
+                            <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex flex-col justify-center"><label className="text-[10px] font-bold text-slate-400 uppercase mb-1">로스팅 날짜</label><input type="date" className="bg-transparent font-bold outline-none w-full dark:text-white" value={beanForm.roastingDate} onChange={e => setBeanForm({...beanForm, roastingDate: e.target.value})}/></div><div className="space-y-3 pt-2"><h3 className="text-xs font-bold text-slate-400 uppercase">구매 정보</h3><div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl flex flex-col justify-center"><label className="text-[10px] font-bold text-slate-400 uppercase mb-1">구매일 (Purchase Date)</label><input type="date" className="bg-transparent font-bold outline-none w-full dark:text-white" value={beanForm.purchaseDate} onChange={e => setBeanForm({...beanForm, purchaseDate: e.target.value})}/></div><div className="space-y-1"><label className="text-xs font-bold text-slate-500 dark:text-slate-400 ml-1">구매처 (Shop)</label><div className="relative"><ShoppingBag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18}/><input list="shop-suggestions" className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 pl-10 rounded-xl text-sm font-bold outline-none" placeholder="예: Momos Coffee" value={beanForm.shop} onChange={handleShopChange}/><datalist id="shop-suggestions">{[...new Set(beans.map(b => b.shop).filter(Boolean))].map((shop, i) => (<option key={i} value={shop} />))}</datalist></div></div><input className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="구매 URL (http://...)" value={beanForm.purchaseUrl} onChange={e => setBeanForm({...beanForm, purchaseUrl: e.target.value})}/><div className="grid grid-cols-2 gap-3"><div className="col-span-2"></div><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="용량 (g)" value={beanForm.weight} onChange={e => setBeanForm({...beanForm, weight: e.target.value})}/><input className="bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="가격 (원)" value={beanForm.price} onChange={e => setBeanForm({...beanForm, price: e.target.value})}/></div><input className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="한 잔 가격 (카페)" value={beanForm.pricePerCup} onChange={e => setBeanForm({...beanForm, pricePerCup: e.target.value})}/></div><div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Flavor Keywords</label><div className="relative"><input className="w-full bg-amber-50 dark:bg-amber-900/20 p-4 pr-12 rounded-xl text-sm font-bold text-amber-900 dark:text-amber-400 outline-none placeholder-amber-900/30" placeholder="베리, 초콜릿 (콤마 구분)" value={beanForm.notes} onChange={e => setBeanForm({...beanForm, notes: e.target.value})}/><button onClick={() => { setPickerTarget('bean'); setShowFlavorPicker(true); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30"><Palette size={16}/></button></div></div><textarea className="w-full bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 dark:text-amber-400 outline-none resize-none" placeholder="향미에 대한 자세한 설명 (줄글)" value={beanForm.flavorDesc} onChange={e => setBeanForm({...beanForm, flavorDesc: e.target.value})}/><textarea className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-4 rounded-2xl h-24 text-sm outline-none resize-none" placeholder="메모" value={beanForm.memo} onChange={e => setBeanForm({...beanForm, memo: e.target.value})}/></div>
+                            {selectedId && <button onClick={handleDelete} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center gap-2"><Trash2 size={18}/> 삭제</button>}
                         </main>
                     </div>
                 )}
 
                 {view === VIEW.EDIT_TASTING && (
-                    <div className="flex flex-col h-full bg-white">
-                        <header className="p-4 border-b flex justify-between items-center sticky top-0 z-10 bg-white"><button onClick={() => { goBack(); }} className="p-2"><ChevronLeft/></button><h1 className="font-black">평가 작성</h1><button onClick={handleSaveTasting} disabled={isSaving} className="bg-slate-900 text-white px-5 py-2 rounded-full text-xs font-bold disabled:bg-slate-300">{isSaving ? '저장...' : '완료'}</button></header>
+                    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
+                        <header className="p-4 border-b dark:border-slate-800 flex justify-between items-center sticky top-0 z-10 bg-white dark:bg-slate-900"><button onClick={() => { goBack(); }} className="p-2"><ChevronLeft/></button><h1 className="font-black dark:text-white">평가 작성</h1><button onClick={handleSaveTasting} disabled={isSaving} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-5 py-2 rounded-full text-xs font-bold disabled:bg-slate-300 dark:disabled:bg-slate-700">{isSaving ? '저장...' : '완료'}</button></header>
                         <main className="flex-1 overflow-y-auto p-6 space-y-8 pb-64">
-                            <input type="date" className="w-full bg-slate-50 p-3 rounded-2xl text-center font-bold outline-none" value={tastingForm.date} onChange={e => setTastingForm({...tastingForm, date: e.target.value})}/>
-                            <div className="flex items-center justify-between"><div className="text-center flex-1 flex flex-col items-center"><div className="relative"><div className="inline-flex items-center justify-center w-24 h-24 bg-slate-900 text-white rounded-3xl text-4xl font-black shadow-xl mb-2">{tastingForm.isManualTotal ? (<input type="number" className="w-full bg-transparent text-center text-white outline-none" value={tastingForm.totalScore || ""} onChange={(e) => setTastingForm(prev => ({ ...prev, totalScore: e.target.value }))} placeholder="0.0"/>) : ( calcAvg(tastingForm.scores) )}</div><button onClick={() => setTastingForm(prev => { const nextMode = !prev.isManualTotal; return { ...prev, isManualTotal: nextMode, totalScore: nextMode ? calcAvg(prev.scores) : undefined }; })} className="absolute -right-2 -top-2 bg-white text-slate-900 p-1.5 rounded-full shadow-md border">{tastingForm.isManualTotal ? <Calculator size={12}/> : <PenTool size={12}/>}</button></div><p className="text-[10px] font-bold text-slate-400 uppercase">{tastingForm.isManualTotal ? "Manual Score" : "Total Score"}</p></div><div className="flex-1 flex justify-center"><RadarChart scores={tastingForm.scores} /></div></div>
-                            <div className="grid grid-cols-2 gap-3">{TASTE_ITEMS.map(item => (<div key={item.id} className="bg-slate-50 p-3 rounded-2xl flex flex-col items-center justify-center gap-2"><span className="text-xs font-bold uppercase text-slate-500">{item.label}</span><div className="flex items-center gap-2"><ScoreButton onClick={() => updateScore(item.id, -0.1)} icon={<Minus size={14} className="text-slate-400"/>} /><input type="number" value={tastingForm.scores[item.id]} onChange={(e) => setTastingForm(prev => ({ ...prev, scores: { ...prev.scores, [item.id]: e.target.value } }))} className="w-12 text-center font-black text-xl bg-transparent outline-none p-0 m-0 border-0 focus:ring-0" /><ScoreButtonPlus onClick={() => updateScore(item.id, +0.1)} icon={<Plus size={14} className="text-white"/>} /></div></div>))}</div>
-                            <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Keywords</label><div className="relative"><input className="w-full bg-amber-50 p-4 pr-12 rounded-xl text-sm font-bold text-amber-900 outline-none placeholder-amber-900/30" placeholder="산미, 단맛 (콤마 구분)" value={tastingForm.notes} onChange={e => setTastingForm({...tastingForm, notes: e.target.value})}/><button onClick={() => { setPickerTarget('tasting'); setShowFlavorPicker(true); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white rounded-lg shadow-sm text-amber-600 border border-amber-100"><Palette size={16}/></button></div></div>
-                            <textarea className="w-full bg-amber-50 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 outline-none resize-none" placeholder="맛에 대한 자세한 평가" value={tastingForm.desc} onChange={e => setTastingForm({...tastingForm, desc: e.target.value})}/><textarea className="w-full bg-slate-50 p-4 rounded-2xl h-32 text-sm outline-none resize-none" placeholder="레시피 / 메모" value={tastingForm.memo} onChange={e => setTastingForm({...tastingForm, memo: e.target.value})}/>
-                            {editTastingIdx !== null && (<button onClick={handleDeleteTasting} className="w-full py-4 text-red-500 font-bold bg-red-50 rounded-2xl flex items-center justify-center gap-2 mt-4"><Trash2 size={16}/> 이 기록 삭제</button>)}
+                            <input type="date" className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-2xl text-center font-bold outline-none" value={tastingForm.date} onChange={e => setTastingForm({...tastingForm, date: e.target.value})}/>
+                            <div className="flex items-center justify-between"><div className="text-center flex-1 flex flex-col items-center"><div className="relative"><div className="inline-flex items-center justify-center w-24 h-24 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-3xl text-4xl font-black shadow-xl mb-2">{tastingForm.isManualTotal ? (<input type="number" className="w-full bg-transparent text-center text-white dark:text-slate-900 outline-none" value={tastingForm.totalScore || ""} onChange={(e) => setTastingForm(prev => ({ ...prev, totalScore: e.target.value }))} placeholder="0.0"/>) : ( calcAvg(tastingForm.scores) )}</div><button onClick={() => setTastingForm(prev => { const nextMode = !prev.isManualTotal; return { ...prev, isManualTotal: nextMode, totalScore: nextMode ? calcAvg(prev.scores) : undefined }; })} className="absolute -right-2 -top-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-white p-1.5 rounded-full shadow-md border dark:border-slate-700">{tastingForm.isManualTotal ? <Calculator size={12}/> : <PenTool size={12}/>}</button></div><p className="text-[10px] font-bold text-slate-400 uppercase">{tastingForm.isManualTotal ? "Manual Score" : "Total Score"}</p></div><div className="flex-1 flex justify-center"><RadarChart scores={tastingForm.scores} /></div></div>
+                            <div className="grid grid-cols-2 gap-3">{TASTE_ITEMS.map(item => (<div key={item.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl flex flex-col items-center justify-center gap-2"><span className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">{item.label}</span><div className="flex items-center gap-2"><ScoreButton onClick={() => updateScore(item.id, -0.1)} icon={<Minus size={14} className="text-slate-400"/>} /><input type="number" value={tastingForm.scores[item.id]} onChange={(e) => setTastingForm(prev => ({ ...prev, scores: { ...prev.scores, [item.id]: e.target.value } }))} className="w-12 text-center font-black text-xl bg-transparent outline-none p-0 m-0 border-0 focus:ring-0 dark:text-white" /><ScoreButtonPlus onClick={() => updateScore(item.id, +0.1)} icon={<Plus size={14} className="text-white"/>} /></div></div>))}</div>
+                            <div className="space-y-2"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Keywords</label><div className="relative"><input className="w-full bg-amber-50 dark:bg-amber-900/20 p-4 pr-12 rounded-xl text-sm font-bold text-amber-900 dark:text-amber-400 outline-none placeholder-amber-900/30" placeholder="산미, 단맛 (콤마 구분)" value={tastingForm.notes} onChange={e => setTastingForm({...tastingForm, notes: e.target.value})}/><button onClick={() => { setPickerTarget('tasting'); setShowFlavorPicker(true); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30"><Palette size={16}/></button></div></div>
+                            <textarea className="w-full bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl h-24 text-sm font-medium text-amber-900 dark:text-amber-400 outline-none resize-none" placeholder="맛에 대한 자세한 평가" value={tastingForm.desc} onChange={e => setTastingForm({...tastingForm, desc: e.target.value})}/><textarea className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-4 rounded-2xl h-32 text-sm outline-none resize-none" placeholder="레시피 / 메모" value={tastingForm.memo} onChange={e => setTastingForm({...tastingForm, memo: e.target.value})}/>
+                            {editTastingIdx !== null && (<button onClick={handleDeleteTasting} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl flex items-center justify-center gap-2 mt-4"><Trash2 size={16}/> 이 기록 삭제</button>)}
                         </main>
                     </div>
                 )}
@@ -790,7 +964,7 @@
     };
 
     // --- TIMER TAB ---
-    const TimerTab = ({ active, setIsTimerRunning }) => { 
+    const TimerTab = ({ active, setIsTimerRunning, navKey }) => { 
         // v54 Constants & Default Recipes (Restored)
         const DEFAULT_RECIPES = [
             { id: 1, title: "기본 푸어 오버 20g", bean: "20", water: "60 80 80 80", interval: "30 30 30", endTime: "3:00", memo: "물 온도는 93도가 적당합니다.\n뜸 들이기는 30초 정도 진행해주세요." },
@@ -837,7 +1011,7 @@
         };
         useEffect(() => {
             if (active && !run) openRecipeList();
-        }, [active]);
+        }, [active, navKey]);
 
         const openMemo = () => {
              window.history.pushState({ tab: TAB.TIMER, modal: 'MEMO' }, '');
@@ -900,7 +1074,7 @@
 
         // [Fix] Save Modal Logic
         const handleSaveRequest = () => {
-            if (!recipe.title?.trim() || !recipe.bean?.trim() || !recipe.water?.trim() || !recipe.interval?.trim() || !recipe.endTime?.trim()) {
+            if (!recipe.title?.trim()) {
                 showToastMsg("빈칸을 입력해주세요");
                 return;
             }
@@ -972,24 +1146,24 @@
         const curRatio = useMemo(()=>calculateRatio(recipe.bean, recipe.water),[recipe.bean,recipe.water]);
 
         return (
-            <div className={`h-full flex flex-col bg-slate-50 relative ${active ? 'block' : 'hidden'}`}>
+            <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 relative ${active ? 'block' : 'hidden'}`}>
                 {toast && <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-xl z-[120] whitespace-nowrap animate-in fade-in slide-in-from-top-2">{toast}</div>}
 
                 {/* [Fix] Save Modal */}
                 {showSaveModal && (
-                    <div className="absolute inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
-                        <div className="bg-white w-full max-w-xs rounded-2xl p-5 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
-                            <h3 className="text-lg font-bold mb-3 text-slate-900">레시피 저장</h3>
+                    <div className="absolute inset-0 z-[110] bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-xs rounded-2xl p-5 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
+                            <h3 className="text-lg font-bold mb-3 text-slate-900 dark:text-white">레시피 저장</h3>
                             <div className="flex flex-col gap-2">
                                 {recipe.id && (
-                                    <button onClick={() => confirmSave(true)} className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold hover:bg-blue-100">
+                                    <button onClick={() => confirmSave(true)} className="w-full py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl font-bold hover:bg-blue-100 dark:hover:bg-blue-900/30">
                                         기존 레시피 덮어쓰기
                                     </button>
                                 )}
-                                <button onClick={() => confirmSave(false)} className="w-full py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800">
+                                <button onClick={() => confirmSave(false)} className="w-full py-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold hover:bg-slate-800 dark:hover:bg-slate-200">
                                     새 레시피로 저장
                                 </button>
-                                <button onClick={() => window.history.back()} className="w-full py-3 text-slate-400 font-bold hover:text-slate-600">
+                                <button onClick={() => window.history.back()} className="w-full py-3 text-slate-400 font-bold hover:text-slate-600 dark:hover:text-slate-300">
                                     취소
                                 </button>
                             </div>
@@ -999,20 +1173,20 @@
                 
                 {/* [Fix] Delete Modal */}
                 {showDeleteModal && (
-                    <div className="absolute inset-0 z-[110] bg-black/50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
-                        <div className="bg-white w-full max-w-xs rounded-2xl p-5 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
+                    <div className="absolute inset-0 z-[110] bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-xs rounded-2xl p-5 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
                             <div className="flex flex-col items-center gap-2 mb-4">
-                                <div className="w-10 h-10 bg-red-50 text-red-500 rounded-full flex items-center justify-center">
+                                <div className="w-10 h-10 bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 rounded-full flex items-center justify-center">
                                     <Trash2 size={20} />
                                 </div>
-                                <h3 className="text-lg font-bold text-slate-900">레시피 삭제</h3>
-                                <p className="text-sm text-slate-500 text-center">이 레시피를 정말 삭제하시겠습니까?<br/>삭제된 데이터는 복구할 수 없습니다.</p>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">레시피 삭제</h3>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 text-center">이 레시피를 정말 삭제하시겠습니까?<br/>삭제된 데이터는 복구할 수 없습니다.</p>
                             </div>
                             <div className="flex gap-2">
-                                <button onClick={() => window.history.back()} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold hover:bg-slate-200">
+                                <button onClick={() => window.history.back()} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-slate-700">
                                     취소
                                 </button>
-                                <button onClick={confirmDelete} className="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600">
+                                <button onClick={confirmDelete} className="flex-1 py-3 bg-red-500 dark:bg-red-600 text-white rounded-xl font-bold hover:bg-red-600 dark:hover:bg-red-700">
                                     삭제
                                 </button>
                             </div>
@@ -1022,20 +1196,20 @@
 
                 {/* Modal: Recipe List */}
                 {showList && (
-                    <div className="absolute inset-0 z-[100] bg-black/50 flex items-end" onClick={()=>window.history.back()}>
-                        <div className="w-full bg-white rounded-t-3xl h-[85%] p-5 flex flex-col animate-slide-up" onClick={e=>e.stopPropagation()}>
+                    <div className="absolute inset-0 z-[100] bg-black/50 dark:bg-black/70 flex items-end" onClick={()=>window.history.back()}>
+                        <div className="w-full bg-white dark:bg-slate-900 rounded-t-3xl h-[85%] p-5 flex flex-col animate-slide-up" onClick={e=>e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-4">
-                                <h2 className="font-bold text-lg">Saved Recipes</h2>
+                                <h2 className="font-bold text-lg dark:text-white">Saved Recipes</h2>
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => { setRecipe({...INITIAL_RECIPE, id: Date.now()}); setRun(false); setMode('EDIT'); window.history.back(); }} className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-bold flex items-center gap-1"><Plus size={14}/> NEW</button>
+                                    <button onClick={() => { setRecipe({...INITIAL_RECIPE, id: Date.now()}); setRun(false); setMode('EDIT'); window.history.back(); }} className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-full text-xs font-bold flex items-center gap-1"><Plus size={14}/> NEW</button>
                                     <X onClick={()=>window.history.back()} className="cursor-pointer text-slate-400"/>
                                 </div>
                             </div>
                             <div className="flex-1 overflow-y-auto space-y-3 pb-10">
                                 {recipes.map(r=>(
-                                    <div key={r.id} onClick={()=>loadR(r)} className="bg-slate-50 p-4 rounded-xl border flex justify-between items-center active:scale-95 transition-transform cursor-pointer">
+                                    <div key={r.id} onClick={()=>loadR(r)} className="bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border dark:border-slate-700 flex justify-between items-center active:scale-95 transition-transform cursor-pointer">
                                         <div className="flex items-center gap-3">
-                                            <div><h3 className="font-bold">{r.title}</h3><span className="text-xs text-slate-500 flex items-center gap-1"><CustomBeanIcon size={10} className="text-amber-700"/> {r.bean}g <span className="text-slate-300">·</span> <Calculator size={10} className="text-orange-400"/> {calculateRatio(r.bean, r.water)} <Droplet size={10} className="text-blue-400 ml-1"/> {r.water}</span></div>
+                                            <div><h3 className="font-bold dark:text-white">{r.title}</h3><span className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1"><CustomBeanIcon size={10} className="text-amber-700 dark:text-amber-500"/> {r.bean}g <span className="text-slate-300 dark:text-slate-600">·</span> <Calculator size={10} className="text-orange-400"/> {calculateRatio(r.bean, r.water)} <Droplet size={10} className="text-blue-400 ml-1"/> {r.water}</span></div>
                                         </div>
                                         <button onClick={(e)=>handleDelRequest(r.id,e)} className="p-2"><Trash2 size={16} className="text-slate-300 hover:text-red-500"/></button>
                                     </div>
@@ -1045,44 +1219,44 @@
                     </div>
                 )}
                 
-                <header className="p-4 pt-4 flex justify-between items-center bg-white border-b sticky top-0 z-10">
-                    <h1 className="text-xl font-black text-slate-900 flex items-center gap-2"><Timer className="text-blue-500"/> Brewing Timer</h1>
+                <header className="p-4 pt-4 flex justify-between items-center bg-white dark:bg-slate-900 border-b dark:border-slate-800 sticky top-0 z-10">
+                    <h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2"><Timer className="text-blue-500"/> Brewing Timer</h1>
                     <div className="flex gap-2">
-                        <button onClick={openRecipeList} className="p-2 bg-slate-100 rounded-full text-slate-500"><List size={18}/></button>
-                        {mode==='TIMER' && <><button onClick={openMemo} className="p-2 bg-slate-100 rounded-full text-slate-500 hover:text-amber-500"><StickyNote size={18}/></button><button onClick={handleSettingClick} className="p-2 bg-slate-100 rounded-full text-slate-500"><Settings size={18}/></button></>}
-                        {mode==='EDIT' && <button onClick={()=>setRecipe({...INITIAL_RECIPE, id: Date.now()})} className="p-2 bg-slate-100 rounded-full text-blue-500 font-bold text-xs flex items-center gap-1"><Plus size={14}/> NEW</button>}
+                        <button onClick={openRecipeList} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400"><List size={18}/></button>
+                        {mode==='TIMER' && <><button onClick={openMemo} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 hover:text-amber-500"><StickyNote size={18}/></button><button onClick={handleSettingClick} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400"><Settings size={18}/></button></>}
+                        {mode==='EDIT' && <button onClick={()=>setRecipe({...INITIAL_RECIPE, id: Date.now()})} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-blue-500 dark:text-blue-400 font-bold text-xs flex items-center gap-1"><Plus size={14}/> NEW</button>}
                     </div>
                 </header>
 
                 {mode === 'EDIT' && (
                     <div className="flex-1 overflow-y-auto p-6 pb-24 space-y-4">
-                        <div className="mb-2"><div className="flex justify-between items-end mb-1"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Name</label><span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg flex items-center gap-1"><Calculator size={12}/> {curRatio}</span></div><input className="w-full text-2xl font-bold font-brand bg-slate-100 rounded-xl p-3 outline-none" value={recipe.title} onChange={e=>setRecipe({...recipe,title:e.target.value})} placeholder="레시피 이름"/></div>
-                        <div><label className="text-xs font-bold text-slate-500">원두 (g)</label><input className="w-full bg-slate-100 p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.bean} onChange={e=>setRecipe({...recipe,bean:e.target.value})}/></div>
-                        <div><label className="text-xs font-bold text-slate-500">물/명령어 (ex: cl 60 sw)</label><input className="w-full bg-slate-100 p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.water} onChange={e=>setRecipe({...recipe,water:e.target.value})}/>
-                            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 mt-2"><h4 className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider border-b border-slate-200 pb-1">Command Guide</h4><div className="grid grid-cols-2 gap-y-1 gap-x-2 text-[11px] text-slate-500 font-medium"><div className="flex items-center gap-1"><Droplet size={11} className="text-blue-400"/> <span className="text-slate-800 font-bold">60</span> : 물 60ml</div><div className="flex items-center gap-1"><CustomBeanIcon size={11} className="text-amber-700"/> <span className="text-slate-800 font-bold">20g</span> : 원두 20g</div><div>🔒 <span className="text-slate-800 font-bold">cl</span> : 스위치 닫기</div><div>🔓 <span className="text-slate-800 font-bold">op</span> : 스위치 열기</div><div>🥄 <span className="text-slate-800 font-bold">st</span> : 젓기</div><div>👋 <span className="text-slate-800 font-bold">sw</span> : 흔들기</div><div>⭕ <span className="text-slate-800 font-bold">c</span> : 원형 푸어</div><div>🌀 <span className="text-slate-800 font-bold">s</span> : 나선 푸어</div><div>🎯 <span className="text-slate-800 font-bold">ct</span> : 중앙 푸어</div></div><div className="mt-2 text-[11px] text-blue-600 bg-blue-50 px-2 py-1 rounded">✨ <b>조합 예시:</b> cl60sw <span className="text-blue-400 text-[10px]">(닫고 60ml 붓고 흔들기)</span></div></div></div>
-                        <div className="flex gap-2"><div><label className="text-xs font-bold text-slate-500">간격 (초)</label><input className="w-full bg-slate-100 p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.interval} onChange={e=>setRecipe({...recipe,interval:e.target.value})}/></div><div><label className="text-xs font-bold text-slate-500">종료 시간</label><input className="w-full bg-slate-100 p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.endTime} onChange={e=>setRecipe({...recipe,endTime:e.target.value})}/></div></div>
-                        <textarea className="w-full bg-amber-50 p-3 rounded-xl h-20 text-sm outline-none resize-none placeholder-amber-800/30" placeholder="메모" value={recipe.memo} onChange={e=>setRecipe({...recipe,memo:e.target.value})}/>
-                        <div className="flex gap-2 pt-2"><button onClick={handleSaveRequest} className="flex-1 py-3 bg-blue-100 text-blue-600 rounded-xl font-bold flex justify-center gap-2"><Save size={18}/> 레시피 저장</button></div>
-                        <button onClick={startBrewing} className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold text-lg shadow-lg flex justify-center gap-2"><Play size={20} fill="currentColor"/> 타이머 시작</button>
+                        <div className="mb-2"><div className="flex justify-between items-end mb-1"><label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Name</label><span className="text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-lg flex items-center gap-1"><Calculator size={12}/> {curRatio}</span></div><input className="w-full text-2xl font-bold font-brand bg-slate-100 dark:bg-slate-800 dark:text-white rounded-xl p-3 outline-none" value={recipe.title} onChange={e=>setRecipe({...recipe,title:e.target.value})} placeholder="레시피 이름"/></div>
+                        <div><label className="text-xs font-bold text-slate-500 dark:text-slate-400">원두 (g)</label><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.bean} onChange={e=>setRecipe({...recipe,bean:e.target.value})}/></div>
+                        <div><label className="text-xs font-bold text-slate-500 dark:text-slate-400">물/명령어 (ex: cl 60 sw)</label><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.water} onChange={e=>setRecipe({...recipe,water:e.target.value})}/>
+                            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl p-3 mt-2"><h4 className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700 pb-1">Command Guide</h4><div className="grid grid-cols-2 gap-y-1 gap-x-2 text-[11px] text-slate-500 dark:text-slate-400 font-medium"><div className="flex items-center gap-1"><Droplet size={11} className="text-blue-400"/> <span className="text-slate-800 dark:text-slate-200 font-bold">60</span> : 물 60ml</div><div className="flex items-center gap-1"><CustomBeanIcon size={11} className="text-amber-700 dark:text-amber-500"/> <span className="text-slate-800 dark:text-slate-200 font-bold">20g</span> : 원두 20g</div><div>🔒 <span className="text-slate-800 dark:text-slate-200 font-bold">cl</span> : 스위치 닫기</div><div>🔓 <span className="text-slate-800 dark:text-slate-200 font-bold">op</span> : 스위치 열기</div><div>🥄 <span className="text-slate-800 dark:text-slate-200 font-bold">st</span> : 젓기</div><div>👋 <span className="text-slate-800 dark:text-slate-200 font-bold">sw</span> : 흔들기</div><div>⭕ <span className="text-slate-800 dark:text-slate-200 font-bold">c</span> : 원형 푸어</div><div>🌀 <span className="text-slate-800 dark:text-slate-200 font-bold">s</span> : 나선 푸어</div><div>🎯 <span className="text-slate-800 dark:text-slate-200 font-bold">ct</span> : 중앙 푸어</div></div><div className="mt-2 text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">✨ <b>조합 예시:</b> cl60sw <span className="text-blue-400 text-[10px]">(닫고 60ml 붓고 흔들기)</span></div></div></div>
+                        <div className="flex gap-2"><div><label className="text-xs font-bold text-slate-500 dark:text-slate-400">간격 (초)</label><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.interval} onChange={e=>setRecipe({...recipe,interval:e.target.value})}/></div><div><label className="text-xs font-bold text-slate-500 dark:text-slate-400">종료 시간</label><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 rounded-xl font-bold outline-none border border-transparent focus:border-blue-200" value={recipe.endTime} onChange={e=>setRecipe({...recipe,endTime:e.target.value})}/></div></div>
+                        <textarea className="w-full bg-amber-50 dark:bg-amber-900/20 p-3 rounded-xl h-20 text-sm outline-none resize-none placeholder-amber-800/30 dark:text-amber-100" placeholder="메모" value={recipe.memo} onChange={e=>setRecipe({...recipe,memo:e.target.value})}/>
+                        <div className="flex gap-2 pt-2"><button onClick={handleSaveRequest} className="flex-1 py-3 bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 rounded-xl font-bold flex justify-center gap-2"><Save size={18}/> 레시피 저장</button></div>
+                        <button onClick={startBrewing} className="w-full py-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold text-lg shadow-lg flex justify-center gap-2"><Play size={20} fill="currentColor"/> 타이머 시작</button>
                     </div>
                 )}
 
                 {mode === 'TIMER' && (
                     <div className="flex-1 flex flex-col relative overflow-hidden">
-                        <div className="bg-white p-6 pb-4 rounded-b-[32px] shadow-sm z-10 text-center relative shrink-0"> 
-                            <h2 className="text-lg font-bold truncate mb-1">{recipe.title}</h2>
-                            <div className="text-xs font-bold text-slate-400 mb-6 bg-slate-100 px-3 py-1 rounded-full inline-flex items-center gap-1"><CustomBeanIcon size={12} className="text-amber-700"/> {recipe.bean}g <span className="mx-1">·</span> <Calculator size={12} className="text-orange-400"/> {curRatio}</div>
+                        <div className="bg-white dark:bg-slate-900 p-6 pb-4 rounded-b-[32px] shadow-sm z-10 text-center relative shrink-0"> 
+                            <h2 className="text-lg font-bold truncate mb-1 dark:text-white">{recipe.title}</h2>
+                            <div className="text-xs font-bold text-slate-400 mb-6 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full inline-flex items-center gap-1"><CustomBeanIcon size={12} className="text-amber-700 dark:text-amber-500"/> {recipe.bean}g <span className="mx-1">·</span> <Calculator size={12} className="text-orange-400"/> {curRatio}</div>
                             <div className="flex justify-center items-center gap-6 mb-6">
-                                <button onClick={handleReset} className="w-14 h-14 shrink-0 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 shadow-sm hover:text-red-500 hover:bg-red-50 transition-colors"><RefreshCw size={22}/></button>
-                                <span className="text-6xl font-bold font-brand tabular-nums tracking-tighter w-48 text-center">{formatTime(time)}</span>
-                                <button onClick={toggleRun} className={`w-14 h-14 shrink-0 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-95 ${run?'bg-amber-100 text-amber-600':'bg-slate-900'}`}>{run?<Pause size={24} fill="currentColor"/>:<Play size={24} fill="currentColor" className="ml-1"/>}</button>
+                                <button onClick={handleReset} className="w-14 h-14 shrink-0 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center text-slate-400 shadow-sm hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"><RefreshCw size={22}/></button>
+                                <span className="text-6xl font-bold font-brand tabular-nums tracking-tighter w-48 text-center dark:text-white">{formatTime(time)}</span>
+                                <button onClick={toggleRun} className={`w-14 h-14 shrink-0 rounded-full flex items-center justify-center text-white shadow-lg transition-all active:scale-95 ${run?'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400':'bg-slate-900 dark:bg-slate-100 dark:text-slate-900'}`}>{run?<Pause size={24} fill="currentColor"/>:<Play size={24} fill="currentColor" className="ml-1"/>}</button>
                             </div>
-                            <div className="w-full max-w-[320px] mx-auto bg-white border-2 border-blue-500 shadow-xl rounded-2xl p-4 step-active flex items-center gap-4">
-                                <div className="bg-blue-50 rounded-xl p-2 flex items-center justify-center border border-blue-100 w-[70px] shrink-0 h-[70px]">
+                            <div className="w-full max-w-[320px] mx-auto bg-white dark:bg-slate-800 border-2 border-blue-500 shadow-xl rounded-2xl p-4 step-active flex items-center gap-4">
+                                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-2 flex items-center justify-center border border-blue-100 dark:border-blue-900/30 w-[70px] shrink-0 h-[70px]">
                                     {curStep.icons?.length>0?curStep.icons.map((item, idx)=><MiniIcon key={idx} iconType={item.icon} isMain={item.type==='MAIN'}/>):<Clock size={20} className="text-slate-300"/>}
                                 </div>
                                 <div className="flex-1 text-center">
-                                    <div className="text-2xl font-black text-slate-900 leading-none mb-1 break-keep">{curStep.desc}</div>
+                                    <div className="text-2xl font-black text-slate-900 dark:text-white leading-none mb-1 break-keep">{curStep.desc}</div>
                                     {curStep.cumWater && (
                                         <div className="text-sm font-bold text-blue-500 mb-1">
                                             (누적 {curStep.cumWater}ml{curStep.pourCount ? ` • ${curStep.pourCount}차 푸어` : ''})
@@ -1092,8 +1266,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto bg-slate-50 relative no-scrollbar" ref={scrollRef}>
-                            <div className="px-5 pt-6 pb-[60vh] space-y-6 relative">
+                        <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 relative no-scrollbar" ref={scrollRef}>
+                            <div className="px-5 pt-6 pb-32 space-y-6 relative">
                                 {timeline.map((s,i)=>(
                                     <div key={i} ref={el=>itemRefs.current[i]=el}>
                                         <TimerStepRow step={s} isCurrent={i===stepIdx} isPast={i<stepIdx} />
@@ -1102,7 +1276,7 @@
                             </div>
                         </div>
                         {/* Modal: Memo */}
-                        {showMemo && <div className="absolute inset-0 bg-black/60 z-50 flex items-end" onClick={()=>window.history.back()}><div className="w-full bg-white rounded-t-3xl p-6" onClick={e=>e.stopPropagation()}><div className="flex justify-between mb-4"><h3 className="font-bold flex gap-2"><StickyNote className="text-amber-500"/> Memo</h3><X onClick={()=>window.history.back()}/></div><div className="bg-amber-50 p-4 rounded-2xl text-sm whitespace-pre-wrap min-h-[100px]">{recipe.memo||"메모 없음"}</div></div></div>}
+                        {showMemo && <div className="absolute inset-0 bg-black/60 dark:bg-black/80 z-50 flex items-end" onClick={()=>window.history.back()}><div className="w-full bg-white dark:bg-slate-900 rounded-t-3xl p-6" onClick={e=>e.stopPropagation()}><div className="flex justify-between mb-4"><h3 className="font-bold flex gap-2 dark:text-white"><StickyNote className="text-amber-500"/> Memo</h3><X onClick={()=>window.history.back()} className="dark:text-slate-400"/></div><div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl text-sm whitespace-pre-wrap min-h-[100px] dark:text-amber-100">{recipe.memo||"메모 없음"}</div></div></div>}
                     </div>
                 )}
             </div>
@@ -1110,22 +1284,31 @@
     };
 
     // --- STATS TAB ---
-    const DashboardFilter = ({ selectedYear, onSelectYear, availableYears }) => {
-        const [isOpen, setIsOpen] = useState(false);
+    const DashboardFilter = ({ selectedYear, onSelectYear, availableYears, selectedMonth, onSelectMonth, availableMonths }) => {
+        const [isYearOpen, setIsYearOpen] = useState(false);
+        const [isMonthOpen, setIsMonthOpen] = useState(false);
         return (
-            <div className="relative z-20">
-                <button onClick={() => setIsOpen(!isOpen)} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 bg-white border border-slate-200 pl-3 pr-2 py-1.5 rounded-xl shadow-sm active:scale-95 transition-transform"><span>{selectedYear === 'ALL' ? '전체 기간' : `${selectedYear}년`}</span><ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}/></button>
-                {isOpen && (<><div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)}></div><div className="absolute right-0 top-full mt-2 w-32 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 flex flex-col max-h-[300px] overflow-y-auto"><button onClick={() => { onSelectYear('ALL'); setIsOpen(false); }} className={`text-left px-4 py-3 text-xs font-bold transition-colors ${selectedYear === 'ALL' ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>전체 기간</button>{availableYears.map(year => (<button key={year} onClick={() => { onSelectYear(year); setIsOpen(false); }} className={`text-left px-4 py-3 text-xs font-bold border-t border-slate-50 transition-colors ${selectedYear === year ? 'bg-slate-50 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>{year}년</button>))}</div></>)}
+            <div className="flex gap-2 relative z-20">
+                <div className="relative">
+                    <button onClick={() => { setIsYearOpen(!isYearOpen); setIsMonthOpen(false); }} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 pl-3 pr-2 py-1.5 rounded-xl shadow-sm active:scale-95 transition-transform"><span>{selectedYear === 'ALL' ? '전체 기간' : `${selectedYear}년`}</span><ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${isYearOpen ? 'rotate-180' : ''}`}/></button>
+                    {isYearOpen && (<><div className="fixed inset-0 z-10" onClick={() => setIsYearOpen(false)}></div><div className="absolute left-0 top-full mt-2 w-32 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 flex flex-col max-h-[300px] overflow-y-auto"><button onClick={() => { onSelectYear('ALL'); setIsYearOpen(false); }} className={`text-left px-4 py-3 text-xs font-bold transition-colors ${selectedYear === 'ALL' ? 'bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>전체 기간</button>{availableYears.map(year => (<button key={year} onClick={() => { onSelectYear(year); setIsYearOpen(false); }} className={`text-left px-4 py-3 text-xs font-bold border-t border-slate-50 dark:border-slate-700 transition-colors ${selectedYear === year ? 'bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{year}년</button>))}</div></>)}
+                </div>
+                {selectedYear !== 'ALL' && (
+                    <div className="relative">
+                        <button onClick={() => { setIsMonthOpen(!isMonthOpen); setIsYearOpen(false); }} className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 pl-3 pr-2 py-1.5 rounded-xl shadow-sm active:scale-95 transition-transform"><span>{selectedMonth === 'ALL' ? '전체 월' : `${parseInt(selectedMonth)}월`}</span><ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${isMonthOpen ? 'rotate-180' : ''}`}/></button>
+                        {isMonthOpen && (<><div className="fixed inset-0 z-10" onClick={() => setIsMonthOpen(false)}></div><div className="absolute left-0 top-full mt-2 w-24 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-20 animate-in fade-in slide-in-from-top-2 flex flex-col max-h-[300px] overflow-y-auto"><button onClick={() => { onSelectMonth('ALL'); setIsMonthOpen(false); }} className={`text-left px-4 py-3 text-xs font-bold transition-colors ${selectedMonth === 'ALL' ? 'bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>전체 월</button>{availableMonths.map(month => (<button key={month} onClick={() => { onSelectMonth(month); setIsMonthOpen(false); }} className={`text-left px-4 py-3 text-xs font-bold border-t border-slate-50 dark:border-slate-700 transition-colors ${selectedMonth === month ? 'bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'}`}>{parseInt(month)}월</button>))}</div></>)}
+                    </div>
+                )}
             </div>
         );
     };
 
     const StatCard = ({ label, value, color, subValue, customIcon, subLabel, onClick }) => (
-        <div onClick={onClick} className={`bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 ${onClick ? 'cursor-pointer active:scale-95 transition-transform' : ''}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${color}`}>{customIcon}</div>
+        <div onClick={onClick} className={`bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-3 ${onClick ? 'cursor-pointer active:scale-95 transition-transform' : ''}`}>
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${color} dark:bg-opacity-20`}>{customIcon}</div>
             <div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase">{label}</p>
-                <div className="flex items-baseline gap-1.5"><p className="text-xl font-black text-slate-900 leading-none">{value}</p>{subValue && <span className="text-xs font-bold text-slate-400">{subValue}</span>}</div>
+                <div className="flex items-baseline gap-1.5"><p className="text-xl font-black text-slate-900 dark:text-white leading-none">{value}</p>{subValue && <span className="text-xs font-bold text-slate-400">{subValue}</span>}</div>
                 {subLabel && <p className="text-[9px] text-slate-400 mt-0.5">{subLabel}</p>}
             </div>
         </div>
@@ -1148,23 +1331,24 @@
         const changeYear = (delta) => { onMonthChange(new Date(year + delta, month, 1)); };
 
         return (
-            <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm select-none">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm select-none">
                 <div className="flex justify-between items-center mb-6">
-                    <div className="flex items-center gap-1"><button onClick={() => changeYear(-1)} className="p-1.5 text-slate-300 hover:text-slate-600 active:scale-90 transition-transform rounded-full hover:bg-slate-50"><ChevronsLeft size={20}/></button><button onClick={() => changeMonth(-1)} className="p-1.5 text-slate-300 hover:text-slate-600 active:scale-90 transition-transform rounded-full hover:bg-slate-50"><ChevronLeft size={20}/></button></div>
-                    <h3 className="text-base font-black text-slate-900 font-brand tabular-nums">{year}. {String(month + 1).padStart(2, '0')}</h3>
-                    <div className="flex items-center gap-1"><button onClick={() => changeMonth(1)} className="p-1.5 text-slate-300 hover:text-slate-600 active:scale-90 transition-transform rounded-full hover:bg-slate-50"><ChevronRight size={20}/></button><button onClick={() => changeYear(1)} className="p-1.5 text-slate-300 hover:text-slate-600 active:scale-90 transition-transform rounded-full hover:bg-slate-50"><ChevronsRight size={20}/></button></div>
+                    <div className="flex items-center gap-1"><button onClick={() => changeYear(-1)} className="p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 active:scale-90 transition-transform rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><ChevronsLeft size={20}/></button><button onClick={() => changeMonth(-1)} className="p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 active:scale-90 transition-transform rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><ChevronLeft size={20}/></button></div>
+                    <h3 className="text-base font-black text-slate-900 dark:text-white font-brand tabular-nums">{year}. {String(month + 1).padStart(2, '0')}</h3>
+                    <div className="flex items-center gap-1"><button onClick={() => changeMonth(1)} className="p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 active:scale-90 transition-transform rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><ChevronRight size={20}/></button><button onClick={() => changeYear(1)} className="p-1.5 text-slate-300 hover:text-slate-600 dark:hover:text-slate-200 active:scale-90 transition-transform rounded-full hover:bg-slate-50 dark:hover:bg-slate-800"><ChevronsRight size={20}/></button></div>
                 </div>
                 <div className="grid grid-cols-7 gap-1 text-center mb-2">{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((day,i) => (<div key={day} className={`text-[9px] font-bold uppercase tracking-wider ${i===0?'text-red-400':(i===6?'text-blue-400':'text-slate-300')}`}>{day}</div>))}</div>
-                <div className="grid grid-cols-7 gap-1">{blanks.map(i => <div key={`blank-${i}`} className="aspect-square"></div>)}{days.map(d => (<button key={d} onClick={() => handleDateClick(d)} className={`aspect-square rounded-full flex flex-col items-center justify-center relative transition-all ${isSelected(d) ? 'bg-slate-900 text-white shadow-md scale-105' : 'text-slate-700 hover:bg-slate-50'} ${isToday(d) && !isSelected(d) ? 'border border-slate-200 text-slate-900 font-bold' : ''}`}><span className="text-xs font-bold leading-none z-10">{d}</span>{hasTasting(d) && (<span className={`w-1 h-1 rounded-full mt-1 ${isSelected(d) ? 'bg-amber-400' : 'bg-amber-500'}`}></span>)}</button>))}</div>
+                <div className="grid grid-cols-7 gap-1">{blanks.map(i => <div key={`blank-${i}`} className="aspect-square"></div>)}{days.map(d => (<button key={d} onClick={() => handleDateClick(d)} className={`aspect-square rounded-full flex flex-col items-center justify-center relative transition-all ${isSelected(d) ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 shadow-md scale-105' : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'} ${isToday(d) && !isSelected(d) ? 'border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-bold' : ''}`}><span className="text-xs font-bold leading-none z-10">{d}</span>{hasTasting(d) && (<span className={`w-1 h-1 rounded-full mt-1 ${isSelected(d) ? 'bg-amber-400' : 'bg-amber-500'}`}></span>)}</button>))}</div>
             </div>
         );
     };
 
-    const StatsTab = ({ active, onNavigateToBean }) => {
+    const StatsTab = ({ active, onNavigateToBean, navKey }) => {
         const [beans, setBeans] = useState([]);
         const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
         const [viewDate, setViewDate] = useState(new Date());
         const [selectedYear, setSelectedYear] = useState('ALL');
+        const [selectedMonth, setSelectedMonth] = useState('ALL');
         const scrollRef = useRef(null);
         const [showExpenditurePopup, setShowExpenditurePopup] = useState(false);
 
@@ -1175,10 +1359,18 @@
                 // [Fix] Reset scroll when Stats tab becomes active (via tab bar)
                 if (scrollRef.current) scrollRef.current.scrollTop = 0;
             }
-        }, [active]);
+        }, [active, navKey]);
 
         const stats = useMemo(() => {
-            const filteredBeans = selectedYear === 'ALL' ? beans : beans.filter(b => b.purchaseDate && b.purchaseDate.startsWith(selectedYear));
+            const isMatch = (dateStr) => {
+                if (!dateStr) return false;
+                if (selectedYear === 'ALL') return true;
+                const [y, m] = dateStr.split('-');
+                if (y !== selectedYear) return false;
+                if (selectedMonth !== 'ALL' && m !== String(selectedMonth).padStart(2, '0')) return false;
+                return true;
+            };
+            const filteredBeans = beans.filter(b => isMatch(b.purchaseDate));
             
             const isBean = (b) => parseFloat(b.weight) > 0;
             const beanEntries = filteredBeans.filter(isBean);
@@ -1215,7 +1407,7 @@
                 if (bean.tastings) {
                     bean.tastings.forEach(t => {
                         const tYear = t.date.split('-')[0];
-                        if (selectedYear === 'ALL' || tYear === selectedYear) { totalTastings++; }
+                        if (isMatch(t.date)) { totalTastings++; }
                         dateSet.add(t.date);
                         if (!tastingMap[t.date]) tastingMap[t.date] = [];
                         tastingMap[t.date].push({ ...t, beanId: bean.id, beanName: bean.name });
@@ -1233,41 +1425,51 @@
                 beans.map(b => b.purchaseDate ? b.purchaseDate.split('-')[0] : null)
                 .concat(beans.flatMap(b => b.tastings ? b.tastings.map(t => t.date.split('-')[0]) : []))
             )).filter(Boolean).sort().reverse();
+            
+            let availableMonths = [];
+            if (selectedYear !== 'ALL') {
+                const s = new Set();
+                beans.forEach(b => {
+                    if (b.purchaseDate && b.purchaseDate.startsWith(selectedYear)) s.add(b.purchaseDate.split('-')[1]);
+                    if (b.tastings) b.tastings.forEach(t => { if (t.date.startsWith(selectedYear)) s.add(t.date.split('-')[1]); });
+                });
+                availableMonths = Array.from(s).filter(Boolean).sort();
+            }
 
-            return { totalBeans, totalWeight, activeBeans, soldOutBeans, soldOutWeight, totalCups, totalExpenditure, beanExpenditure, coffeeExpenditure, totalTastings, tastingMap, tastingDays: Array.from(dateSet), monthTastingCount, monthBeansBought, availableYears };
-        }, [beans, viewDate, selectedYear]);
+            return { totalBeans, totalWeight, activeBeans, soldOutBeans, soldOutWeight, totalCups, totalExpenditure, beanExpenditure, coffeeExpenditure, totalTastings, tastingMap, tastingDays: Array.from(dateSet), monthTastingCount, monthBeansBought, availableYears, availableMonths };
+        }, [beans, viewDate, selectedYear, selectedMonth]);
 
         const selectedTastings = stats.tastingMap[selectedDate] || [];
 
         return (
-            <div className={`h-full flex flex-col bg-slate-50 ${active ? 'block' : 'hidden'}`}>
+            <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 ${active ? 'block' : 'hidden'}`}>
                 {showExpenditurePopup && (
-                    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowExpenditurePopup(false)}>
-                        <div className="bg-white w-full max-w-xs rounded-2xl p-6 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-900">지출 상세</h3><button onClick={() => setShowExpenditurePopup(false)} className="p-1 bg-slate-100 rounded-full text-slate-400"><X size={16}/></button></div>
+                    <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowExpenditurePopup(false)}>
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-xs rounded-2xl p-6 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-900 dark:text-white">지출 상세</h3><button onClick={() => setShowExpenditurePopup(false)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400"><X size={16}/></button></div>
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl"><span className="text-xs font-bold text-slate-500">총 지출</span><span className="text-lg font-black text-slate-900">₩{stats.totalExpenditure.toLocaleString()}</span></div>
-                                <div className="flex justify-between items-center px-2"><span className="text-xs font-bold text-slate-400 flex items-center gap-1"><CustomBeanIcon size={12}/> 원두 구매</span><span className="text-sm font-bold text-slate-700">₩{stats.beanExpenditure.toLocaleString()}</span></div>
-                                <div className="flex justify-between items-center px-2"><span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Coffee size={12}/> 한잔 커피</span><span className="text-sm font-bold text-slate-700">₩{stats.coffeeExpenditure.toLocaleString()}</span></div>
+                                <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"><span className="text-xs font-bold text-slate-500 dark:text-slate-400">총 지출</span><span className="text-lg font-black text-slate-900 dark:text-white">₩{stats.totalExpenditure.toLocaleString()}</span></div>
+                                <div className="flex justify-between items-center px-2"><span className="text-xs font-bold text-slate-400 flex items-center gap-1"><CustomBeanIcon size={12}/> 원두 구매</span><span className="text-sm font-bold text-slate-700 dark:text-slate-300">₩{stats.beanExpenditure.toLocaleString()}</span></div>
+                                <div className="flex justify-between items-center px-2"><span className="text-xs font-bold text-slate-400 flex items-center gap-1"><Coffee size={12}/> 한잔 커피</span><span className="text-sm font-bold text-slate-700 dark:text-slate-300">₩{stats.coffeeExpenditure.toLocaleString()}</span></div>
                             </div>
                         </div>
                     </div>
                 )}
-                <header className="p-4 pt-4 border-b flex justify-between items-center bg-white sticky top-0 z-10"><h1 className="text-xl font-black text-slate-900 flex items-center gap-2"><LayoutDashboard className="text-slate-900"/> Insights</h1></header>
+                <header className="p-4 pt-4 border-b dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 z-10"><h1 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2"><LayoutDashboard className="text-slate-900 dark:text-white"/> Insights</h1></header>
                 <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24" ref={scrollRef}>
                     <section>
-                        <div className="flex justify-between items-center mb-3 px-1 relative"><h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><BarChart3 size={14}/> Dashboard</h2><DashboardFilter selectedYear={selectedYear} onSelectYear={setSelectedYear} availableYears={stats.availableYears} /></div>
+                        <div className="flex justify-between items-center mb-3 px-1 relative"><h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><BarChart3 size={14}/> Dashboard</h2><DashboardFilter selectedYear={selectedYear} onSelectYear={(y) => { setSelectedYear(y); setSelectedMonth('ALL'); }} availableYears={stats.availableYears} selectedMonth={selectedMonth} onSelectMonth={setSelectedMonth} availableMonths={stats.availableMonths} /></div>
                         <div className="grid grid-cols-2 gap-3">
-                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : selectedYear} 총 원두`} value={stats.totalBeans} subValue={formatWeight(stats.totalWeight)} customIcon={<CustomBeanIcon size={20} className="text-amber-700"/>} color="bg-amber-100" />
+                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 총 원두`} value={stats.totalBeans} subValue={formatWeight(stats.totalWeight)} customIcon={<CustomBeanIcon size={20} className="text-amber-700"/>} color="bg-amber-100" />
                             <StatCard label="누적 지출" value={`₩${stats.totalExpenditure.toLocaleString()}`} customIcon={<ShoppingBag size={18} className="text-green-700"/>} color="bg-green-100" onClick={() => setShowExpenditurePopup(true)} />
                             <StatCard label="보유 원두" value={stats.activeBeans} customIcon={<CustomBeanIcon size={20} className="text-blue-600"/>} color="bg-blue-100" />
                             <StatCard label="소진 원두" value={stats.soldOutBeans} subValue={formatWeight(stats.soldOutWeight)} customIcon={<CustomBeanIcon size={20} className="text-slate-500"/>} color="bg-slate-100" />
                             <StatCard label="한잔 커피" value={stats.totalCups} customIcon={<Coffee size={18} className="text-orange-700"/>} color="bg-orange-100" subValue="Cups" />
-                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : selectedYear} 시음`} value={stats.totalTastings} customIcon={<FileText size={18} className="text-purple-700"/>} color="bg-purple-100" subValue="Records" />
+                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 시음`} value={stats.totalTastings} customIcon={<FileText size={18} className="text-purple-700"/>} color="bg-purple-100" subValue="Records" />
                         </div>
                     </section>
                     <section>
-                        <div className="flex items-center justify-between mb-3 px-1"><div className="flex items-center gap-2"><CalendarDays size={16} className="text-slate-400"/><h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Coffee Calendar</h2></div><div className="flex gap-2 text-[10px] font-bold text-slate-400"><span className="bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 flex items-center gap-1"><Coffee size={10}/> {stats.monthTastingCount}잔 마심</span><span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded border border-slate-200 flex items-center gap-1"><CustomBeanIcon size={10} className="text-amber-700"/> {stats.monthBeansBought}개 구매</span></div></div>
+                        <div className="flex items-center justify-between mb-3 px-1"><div className="flex items-center gap-2"><CalendarDays size={16} className="text-slate-400"/><h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Coffee Calendar</h2></div><div className="flex gap-2 text-[10px] font-bold text-slate-400"><span className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-100 dark:border-amber-900/30 flex items-center gap-1"><Coffee size={10}/> {stats.monthTastingCount}잔 마심</span><span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 flex items-center gap-1"><CustomBeanIcon size={10} className="text-amber-700 dark:text-amber-500"/> {stats.monthBeansBought}개 구매</span></div></div>
                         <CalendarView tastingDays={stats.tastingDays} onSelectDate={setSelectedDate} selectedDate={selectedDate} onMonthChange={setViewDate} viewDate={viewDate} />
                     </section>
                     <section>
@@ -1275,9 +1477,9 @@
                         {selectedTastings.length > 0 ? (
                             <div className="space-y-3">
                                 {selectedTastings.map((t, idx) => (
-                                    <div key={idx} onClick={() => onNavigateToBean(t.beanId, t)} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-transform cursor-pointer hover:border-blue-100">
-                                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center font-black text-sm text-slate-900 border border-slate-100 shrink-0 shadow-sm">{getDisplayScore(t)}</div>
-                                        <div className="flex-1 min-w-0"><h4 className="font-bold text-slate-900 truncate text-sm mb-0.5">{t.beanName}</h4><div className="flex items-center gap-1.5"><span className="text-[10px] bg-slate-100 text-slate-500 px-1 py-0.5 rounded font-bold">Flavor</span><p className="text-xs text-slate-400 truncate flex-1">{t.notes || "-"}</p></div></div><ChevronRight size={16} className="text-slate-300"/>
+                                    <div key={idx} onClick={() => onNavigateToBean(t.beanId, t)} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 active:scale-95 transition-transform cursor-pointer hover:border-blue-100 dark:hover:border-blue-900">
+                                        <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center font-black text-sm text-slate-900 dark:text-white border border-slate-100 dark:border-slate-800 shrink-0 shadow-sm">{getDisplayScore(t)}</div>
+                                        <div className="flex-1 min-w-0"><h4 className="font-bold text-slate-900 dark:text-white truncate text-sm mb-0.5">{t.beanName}</h4><div className="flex items-center gap-1.5"><span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1 py-0.5 rounded font-bold">Flavor</span><p className="text-xs text-slate-400 truncate flex-1">{t.notes || "-"}</p></div></div><ChevronRight size={16} className="text-slate-300"/>
                                     </div>
                                 ))}
                             </div>
@@ -1288,7 +1490,7 @@
         );
     };
 
-    const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg }) => {
+    const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, onToggleTheme, onLoadDemoData }) => {
         if (!active && !apiKey) return null;
 
         const backup = () => {
@@ -1302,13 +1504,22 @@
         };
         const reset = () => { if (confirm("모든 데이터가 삭제됩니다. 초기화하시겠습니까?")) { localStorage.removeItem(`${STORAGE_KEY}_data`); localStorage.removeItem(RECIPE_STORAGE_KEY); localStorage.removeItem(`${STORAGE_KEY}_key`); location.reload(); } };
 
+        const getThemeIcon = () => {
+            if (theme === 'DARK') return <Moon size={20} />;
+            if (theme === 'LIGHT') return <Sun size={20} />;
+            return <Monitor size={20} />;
+        };
+
         return (
-            <div className={`h-full flex flex-col bg-white ${active ? 'block' : 'hidden'}`}>
-                <header className="p-4 pt-4 border-b"><h1 className="font-black text-xl">설정</h1></header>
+            <div className={`h-full flex flex-col bg-white dark:bg-slate-900 dark:text-slate-100 ${active ? 'block' : 'hidden'}`}>
+                <header className="p-4 pt-4 border-b dark:border-slate-800 flex justify-between items-center">
+                    <h1 className="font-black text-xl">설정</h1>
+                    <button onClick={onToggleTheme} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">{getThemeIcon()}</button>
+                </header>
                 <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                    <div className="space-y-2"><label className="text-xs font-bold text-slate-500">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); safeStorage.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
-                    <div className="pt-8 border-t space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={backup} className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept=".json" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
-                    <div className="pt-8 border-t space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://github.com/imonraside/beanlog" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 text-blue-600 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
+                    <div className="space-y-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); safeStorage.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
+                    <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={onLoadDemoData} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Sparkles size={18}/> 데모 데이터 적용</button><button onClick={backup} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept=".json" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
+                    <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://github.com/imonraside/beanlog" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
                     <div className="pt-10 text-center"><p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">BeanLog {APP_VERSION}</p></div>
                 </div>
             </div>
@@ -1414,9 +1625,43 @@
     const App = () => {
         const [tab, setTab] = useState(TAB.BEANS);
         const [apiKey, setApiKey] = useState("");
+        const [navKey, setNavKey] = useState(0);
         const [navProps, setNavProps] = useState(null);
         const [isTimerRunning, setIsTimerRunning] = useState(false);
         const [toast, setToast] = useState(null);
+        const [theme, setTheme] = useState(() => safeStorage.get(`${STORAGE_KEY}_theme`) || 'SYSTEM');
+
+        useEffect(() => {
+            const root = window.document.documentElement;
+            const apply = () => {
+                const isDark = theme === 'DARK' || (theme === 'SYSTEM' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+                if (isDark) { root.classList.add('dark'); document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0f172a'); }
+                else { root.classList.remove('dark'); document.querySelector('meta[name="theme-color"]').setAttribute('content', '#ffffff'); }
+            };
+            apply();
+            if (theme === 'SYSTEM') { const mq = window.matchMedia('(prefers-color-scheme: dark)'); mq.addEventListener('change', apply); return () => mq.removeEventListener('change', apply); }
+        }, [theme]);
+
+        const toggleTheme = () => {
+            const modes = ['LIGHT', 'DARK', 'SYSTEM']; const next = modes[(modes.indexOf(theme) + 1) % modes.length];
+            setTheme(next); safeStorage.set(`${STORAGE_KEY}_theme`, next); showToastMsg(`테마 변경: ${next === 'SYSTEM' ? '시스템 설정' : (next === 'DARK' ? '다크 모드' : '라이트 모드')}`);
+        };
+
+        const loadDemoData = () => {
+            if (confirm("데모 데이터를 추가하시겠습니까? 기존 데이터에 데모용 원두와 시음 기록이 추가됩니다.")) {
+                const existingData = safeStorage.get(`${STORAGE_KEY}_data`) || [];
+                const demoData = getDemoData();
+                const nonDemoData = existingData.filter(item => !String(item.id).startsWith('demo_'));
+                const newData = [...demoData, ...nonDemoData];
+                if (safeStorage.set(`${STORAGE_KEY}_data`, newData)) {
+                    showToastMsg("데모 데이터 적용 완료! 앱을 새로고침합니다.");
+                    setTimeout(() => window.location.reload(), 1500);
+                } else {
+                    showToastMsg("데이터 저장에 실패했습니다.");
+                }
+            }
+        };
+
         const showToastMsg = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
         useEffect(() => { const k = safeStorage.get(`${STORAGE_KEY}_key`); if (k) setApiKey(k); }, []);
@@ -1431,6 +1676,7 @@
             if (newTab === TAB.BEANS) { newState.view = 'LIST'; newState.id = null; }
             else if (newTab === TAB.TIMER) { newState.mode = 'EDIT'; }
             window.history.pushState(newState, '');
+            setNavKey(prev => prev + 1);
             setTab(newTab);
         };
         
@@ -1449,24 +1695,24 @@
         }, []);
 
         return (
-            <div className="h-[100dvh] flex flex-col bg-white max-w-md mx-auto shadow-2xl overflow-hidden relative">
+            <div className="h-[100dvh] flex flex-col bg-white dark:bg-slate-900 max-w-md mx-auto shadow-2xl overflow-hidden relative transition-colors duration-300">
                 <FontLoader />
                 <PWASetup />
                 {toast && <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-xl z-[120] whitespace-nowrap animate-in fade-in slide-in-from-top-2">{toast}</div>}
                 <div className="flex-1 overflow-hidden relative">
-                    <BeansTab active={tab === TAB.BEANS} globalApiKey={apiKey} navProps={navProps} onNavConsumed={() => setNavProps(null)} />
-                    <TimerTab active={tab === TAB.TIMER} setIsTimerRunning={setIsTimerRunning} />
-                    <StatsTab active={tab === TAB.STATS} onNavigateToBean={handleNavigateToTasting} />
-                    <SettingsTab active={tab === TAB.SETTINGS} apiKey={apiKey} setApiKey={setApiKey} showToastMsg={showToastMsg} />
+                    <BeansTab active={tab === TAB.BEANS} globalApiKey={apiKey} navProps={navProps} onNavConsumed={() => setNavProps(null)} navKey={navKey} />
+                    <TimerTab active={tab === TAB.TIMER} setIsTimerRunning={setIsTimerRunning} navKey={navKey} />
+                    <StatsTab active={tab === TAB.STATS} onNavigateToBean={handleNavigateToTasting} navKey={navKey} />
+                    <SettingsTab active={tab === TAB.SETTINGS} apiKey={apiKey} setApiKey={setApiKey} showToastMsg={showToastMsg} theme={theme} onToggleTheme={toggleTheme} onLoadDemoData={loadDemoData} />
                 </div>
-                <div className="bg-white border-t border-slate-100 flex justify-between items-center shrink-0 z-[50] h-[50px] px-6">
-                    <button onClick={() => updateTab(TAB.BEANS)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors ${tab === TAB.BEANS ? 'text-slate-900' : 'text-slate-300'}`}><CustomBeanIcon size={20} className={tab === TAB.BEANS ? 'text-slate-900' : 'text-slate-300'} /></button>
+                <div className="bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0 z-[50] h-[50px] px-6 transition-colors duration-300">
+                    <button onClick={() => updateTab(TAB.BEANS)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors ${tab === TAB.BEANS ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'}`}><CustomBeanIcon size={20} className={tab === TAB.BEANS ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'} /></button>
                     <button onClick={() => updateTab(TAB.TIMER)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors relative ${tab === TAB.TIMER ? 'text-blue-500' : 'text-slate-300'}`}>
                         <Timer size={20} strokeWidth={tab === TAB.TIMER ? 2.5 : 2} />
                         {isTimerRunning && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse border border-white"></span>}
                     </button>
-                    <button onClick={() => updateTab(TAB.STATS)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors ${tab === TAB.STATS ? 'text-slate-900' : 'text-slate-300'}`}><LayoutDashboard size={20} strokeWidth={tab === TAB.STATS ? 2.5 : 2} /></button>
-                    <button onClick={() => updateTab(TAB.SETTINGS)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors ${tab === TAB.SETTINGS ? 'text-slate-900' : 'text-slate-300'}`}><Settings size={20} strokeWidth={tab === TAB.SETTINGS ? 2.5 : 2} /></button>
+                    <button onClick={() => updateTab(TAB.STATS)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors ${tab === TAB.STATS ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'}`}><LayoutDashboard size={20} strokeWidth={tab === TAB.STATS ? 2.5 : 2} /></button>
+                    <button onClick={() => updateTab(TAB.SETTINGS)} className={`flex items-center justify-center w-full h-full gap-1 transition-colors ${tab === TAB.SETTINGS ? 'text-slate-900 dark:text-slate-100' : 'text-slate-300 dark:text-slate-600'}`}><Settings size={20} strokeWidth={tab === TAB.SETTINGS ? 2.5 : 2} /></button>
                 </div>
             </div>
         );
