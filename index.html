@@ -75,7 +75,7 @@
     import { 
       Plus, Camera, Settings, ChevronLeft, Trash2, Coffee, Calendar, Star,
       RefreshCw, Zap, FileText, Clock, ChevronRight, Info, CheckCircle2,
-      Quote, StickyNote, Award, Save, Search, X, Check, ShoppingBag, Download, Upload, RotateCcw,
+      Quote, StickyNote, Award, Save, Search, X, Check, ShoppingBag, Download, Upload, RotateCcw, Link,
       ExternalLink, MapPin, Tag, User, Mountain, Flame, Bean, BeanOff, HelpCircle, Filter, LayoutList, LogOut, Sun, Moon, Monitor, Image as ImageIcon,
       ArrowUpDown, CalendarDays, MoreHorizontal, ToggleLeft, ToggleRight, PenTool, Minus, Calculator, Share2, Layers, Sparkles, Palette,
       Layout, Timer, Play, Pause, Droplet, RefreshCcw, Tornado, Target, Utensils, Waves, List, AlertCircle,
@@ -85,7 +85,7 @@
     // --- 1. GLOBAL HELPERS & CONSTANTS ---
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL";
     const RECIPE_STORAGE_KEY = `${STORAGE_KEY}_recipes`;
-    const APP_VERSION = "v1.1.0";
+    const APP_VERSION = "v1.1.1";
     const TAB = { BEANS: 'BEANS', TIMER: 'TIMER', STATS: 'STATS', SETTINGS: 'SETTINGS' };
     
     const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, isBlend: false, blendInfo: [], mainImage: null, ocrImage: null, tastings: [] };
@@ -95,6 +95,43 @@
 
     const TASTE_ITEMS = [{ id: 'acidity', label: '산미' }, { id: 'balance', label: '밸런스' }, { id: 'sweetness', label: '단맛' }, { id: 'cleanCup', label: '클린컵' }, { id: 'body', label: '바디' }, { id: 'flavor', label: '향미' }];
     const SCORE_LABELS_KO = { acidity: "산미", balance: "밸런스", sweetness: "단맛", cleanCup: "클린컵", body: "바디", flavor: "향미" };
+
+    const generateShareText = (bean, tasting) => {
+        const score = getDisplayScore(tasting);
+        const scoresText = Object.entries(tasting.scores).map(([key, val]) => `- ${SCORE_LABELS_KO[key]}: ${val}`).join('\n');
+        return `[BeanLog 시음 기록]
+원두: ${bean.name}
+국가: ${bean.country || '-'} / 지역: ${bean.region || '-'}
+가공: ${bean.processing || '-'} / 로스팅: ${bean.roastingLevel || '-'} (${bean.roastingDate || '-'})
+구매처: ${bean.shop || '-'}
+
+날짜: ${tasting.date}
+평점: ${score}
+[세부 점수]
+${scoresText}
+
+노트: ${tasting.notes || '-'}
+평가: ${tasting.desc || '-'}
+메모: ${tasting.memo || '-'}`;
+    };
+
+    const generateBeanShareText = (bean) => {
+        const blendText = (bean.isBlend && bean.blendInfo) 
+            ? `블렌드 정보: ${bean.blendInfo.map(b => `${b.country} ${b.variety} ${b.ratio}%`.trim()).join(', ')}\n` 
+            : `국가: ${bean.country || '-'} / 지역: ${bean.region || '-'}\n품종: ${bean.variety || '-'} / 고도: ${bean.altitude || '-'}\n`;
+
+        return `[BeanLog 원두 기록]
+원두: ${bean.name}
+${blendText}가공: ${bean.processing || '-'} / 로스팅: ${bean.roastingLevel || '-'}
+생산자: ${bean.producer || '-'}
+구매처: ${bean.shop || '-'} / 구매일: ${bean.purchaseDate || '-'}
+로스팅 날짜: ${bean.roastingDate || '-'}
+가격: ${bean.price ? `${Number(bean.price).toLocaleString()}원` : '-'} (${bean.weight || '-'}g)${bean.pricePerCup ? ` / 한잔: ${Number(bean.pricePerCup).toLocaleString()}원` : ''}
+${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
+노트: ${bean.notes || '-'}
+향미: ${bean.flavorDesc || '-'}
+메모: ${bean.memo || '-'}`;
+    };
 
     // v1.8.1: Full Flavor Data Set (8 Categories, 87 Notes)
     const FLAVOR_DATA = [
@@ -366,6 +403,20 @@
         );
     };
 
+    const BeanShareModal = ({ bean, onClose }) => {
+        const cardRef = useRef(null); const [generatedImg, setGeneratedImg] = useState(null); const [isGenerating, setIsGenerating] = useState(true);
+        const beanTags = parseTags(bean.notes);
+        const specs = [{ label: "Region", value: bean.region, icon: <MapPin size={8}/> }, { label: "Variety", value: bean.variety, icon: <Tag size={8}/> }, { label: "Process", value: bean.processing, icon: <Layers size={8}/> }, { label: "Altitude", value: bean.altitude, icon: <Mountain size={8}/> }, { label: "Producer", value: bean.producer, icon: <User size={8}/> }, { label: "Roast", value: bean.roastingLevel, icon: <Flame size={8}/> }].filter(s => s.value);
+        useEffect(() => { const generate = async () => { await new Promise(r => setTimeout(r, 800)); if(cardRef.current) { try { const blob = await htmlToImage.toBlob(cardRef.current, { quality: 0.95, backgroundColor: '#ffffff', skipAutoScale: true, pixelRatio: 2, filter: (n) => n.tagName !== 'LINK' }); if (blob) { setGeneratedImg(URL.createObjectURL(blob)); } } catch(e) { console.error(e); } finally { setIsGenerating(false); } } }; generate(); }, []);
+        const handleDownload = () => { if (generatedImg) { const link = document.createElement('a'); link.download = `BeanLog_Bean_${bean.name}.jpg`; link.href = generatedImg; link.click(); } };
+        return (
+            <div className="fixed inset-0 z-[60] bg-black/90 flex flex-col items-center justify-center p-4 animate-in fade-in">
+                <div className="fixed top-0 left-[-9999px]"><div ref={cardRef} className="w-[320px] bg-white rounded-sm shadow-2xl overflow-hidden font-capture text-slate-800"><div className="relative h-64 bg-slate-200">{bean.mainImage ? (<div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${bean.mainImage})` }} />) : (<div className="absolute inset-0 flex items-center justify-center text-slate-400"><CustomBeanIcon size={128} className="opacity-50"/></div>)}<div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div><div className="absolute bottom-0 left-0 right-0 p-5 text-white z-10"><div className="flex items-center justify-between mb-2 opacity-100 items-start"><span className="text-[10px] font-black text-white font-capture whitespace-nowrap drop-shadow-md truncate max-w-[70%]">{bean.shop || "Home Cafe"}</span><div className="flex flex-col items-end drop-shadow-md">{bean.roastingDate && <span className="text-[8px] font-medium opacity-90 mb-0.5">Roast: {bean.roastingDate}</span>}</div></div><h1 className="text-2xl font-black leading-snug mb-1 line-clamp-2 drop-shadow-md font-capture">{bean.name}</h1><p className="text-sm font-bold text-amber-400 mb-3">{bean.country}</p></div></div><div className="p-5 flex flex-col gap-4 bg-white"><div className="flex flex-wrap gap-1.5">{specs.map((s, i) => (<span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-100 border border-slate-200 text-[9px] font-bold text-slate-600"><span className="opacity-50 flex items-center">{s.icon}</span> <span className="leading-none pt-[1px]">{s.value}</span></span>))}</div><div className="grid grid-cols-1 gap-3">{beanTags.length > 0 && (<div className="flex items-start gap-3"><span className="h-[20px] flex items-center justify-center text-[9px] font-black text-amber-700 bg-amber-50 px-2 rounded border border-amber-100 w-14 shrink-0 pt-[1px] gap-1"><CustomBeanIcon size={10} /> NOTE</span><p className="text-xs font-medium text-slate-600 leading-relaxed pt-[1px]">{beanTags.join(', ')}</p></div>)}</div><div className="space-y-2 pt-2 border-t border-dashed border-slate-100">{bean.flavorDesc && (<p className="text-xs text-slate-700 font-medium leading-relaxed"><Quote size={12} className="inline text-slate-300 mr-1 -mt-1"/>{bean.flavorDesc}</p>)}{bean.memo && (<div className="flex gap-2 items-start"><StickyNote size={12} className="text-slate-400 shrink-0 mt-0.5"/><div className="text-[10px] text-slate-500 font-medium leading-snug whitespace-pre-wrap">{bean.memo}</div></div>)}</div></div><div className="bg-slate-900 text-white text-center py-2"><p className="text-[8px] font-bold tracking-[0.2em] uppercase opacity-60 font-brand">Recorded with BeanLog</p></div></div></div>
+                <div className="flex flex-col items-center gap-6">{isGenerating ? (<div className="flex flex-col items-center text-white gap-2"><div className="loader-white"></div><span className="text-xs">카드 만드는 중...</span></div>) : (<div className="flex flex-col items-center animate-in zoom-in-95 duration-300"><img src={generatedImg} className="w-[300px] rounded-lg shadow-2xl mb-4" alt="Bean Card" /><p className="text-white text-sm font-bold animate-pulse">👆 이미지를 꾹 눌러 저장하세요</p></div>)}<button onClick={onClose} className="bg-white/20 text-white px-8 py-3 rounded-full font-bold backdrop-blur-sm hover:bg-white/30 transition-colors">닫기</button>{generatedImg && (<button onClick={handleDownload} className="text-white/60 text-xs hover:text-white underline">다운로드 버튼으로 저장하기</button>)}</div>
+            </div>
+        );
+    };
+
     // --- Helper Components & Functions for Timer (Moved outside for stability) ---
     
     // Timer Icons Component (Scoped)
@@ -512,6 +563,11 @@
         const [sortMode, setSortMode] = useState(SORT_MODE.CREATED_DESC);
         const [showSortMenu, setShowSortMenu] = useState(false);
         const [shareData, setShareData] = useState(null);
+        const [showImportInput, setShowImportInput] = useState(false);
+        const [importUrl, setImportUrl] = useState("");
+        const [showAddMenu, setShowAddMenu] = useState(false);
+        const [shareBeanData, setShareBeanData] = useState(null);
+        const [beanMenuIdx, setBeanMenuIdx] = useState(null);
         const [isProcessing, setIsProcessing] = useState(false);
         const [isSaving, setIsSaving] = useState(false);
         const [toast, setToast] = useState(null);
@@ -617,6 +673,10 @@
         useEffect(() => {
             if (!active) return;
             const handlePop = (event) => {
+                if(showAddMenu) { setShowAddMenu(false); return; }
+                if(showImportInput) { setShowImportInput(false); return; }
+                if(shareBeanData) { setShareBeanData(null); return; }
+                if(beanMenuIdx !== null) { setBeanMenuIdx(null); return; }
                 if(shareData) { setShareData(null); return; }
                 if(cropImage) { setCropImage(null); return; }
                 if(showFlavorPicker) { setShowFlavorPicker(false); return; }
@@ -635,11 +695,31 @@
             };
             window.addEventListener('popstate', handlePop);
             return () => window.removeEventListener('popstate', handlePop);
-        }, [active, shareData, cropImage, showFlavorPicker, showRandomPopup, tastingMenuIdx]);
+        }, [active, shareData, cropImage, showFlavorPicker, showRandomPopup, tastingMenuIdx, shareBeanData, beanMenuIdx, showImportInput, showAddMenu]);
+
+        // [New] Handle Share Link (Import Data)
+        useEffect(() => {
+            if (!active) return;
+            const params = new URLSearchParams(window.location.search);
+            const shareCode = params.get('share');
+            if (shareCode) {
+                try {
+                    const json = decodeURIComponent(escape(atob(shareCode)));
+                    const data = JSON.parse(json);
+                    setBeanForm(prev => ({ ...INITIAL_BEAN, ...data })); 
+                    setTempOcrImage(null);
+                    setView(VIEW.EDIT_BEAN);
+                    showToastMsg("공유된 원두 정보를 불러왔습니다.");
+                    window.history.replaceState({ view: VIEW.LIST, tab: TAB.BEANS }, '', window.location.pathname);
+                    window.history.pushState({ view: VIEW.EDIT_BEAN, tab: TAB.BEANS }, '', window.location.pathname);
+                } catch (e) { console.error(e); showToastMsg("잘못된 공유 링크입니다."); }
+            }
+        }, [active]);
 
         // [Fix for Ghost View]
         useEffect(() => {
             if (active && !navProps) {
+                if (new URLSearchParams(window.location.search).has('share')) return;
                 const currentState = window.history.state;
                 if (currentState && currentState.view && currentState.tab === TAB.BEANS) {
                     setView(currentState.view);
@@ -743,18 +823,7 @@
         const updateScore = (id, delta) => { setTastingForm(prev => { let nextVal = prev.scores[id] + delta; if (nextVal < 0) nextVal = 0; if (nextVal > 10) nextVal = 10; nextVal = Math.round(nextVal * 10) / 10; return { ...prev, scores: { ...prev.scores, [id]: nextVal } }; }); };
         
         const handleTextShare = async (bean, tasting) => {
-            const score = getDisplayScore(tasting);
-            const text = `[BeanLog 시음 기록]
-원두: ${bean.name}
-국가: ${bean.country || '-'} / 지역: ${bean.region || '-'}
-가공: ${bean.processing || '-'} / 로스팅: ${bean.roastingLevel || '-'} (${bean.roastingDate || '-'})
-구매처: ${bean.shop || '-'}
-
-날짜: ${tasting.date}
-평점: ${score}
-노트: ${tasting.notes || '-'}
-평가: ${tasting.desc || '-'}
-메모: ${tasting.memo || '-'}`;
+            const text = generateShareText(bean, tasting);
 
             if (navigator.share) {
                 try { await navigator.share({ text }); } catch (e) { console.log(e); }
@@ -778,8 +847,83 @@
             }
         };
 
-        const handleTouchStart = (idx) => { isLongPress.current = false; longPressTimer.current = setTimeout(() => { isLongPress.current = true; setTastingMenuIdx(idx); if (navigator.vibrate) navigator.vibrate(50); }, 600); };
+        const handleTouchStart = (idx) => { isLongPress.current = false; longPressTimer.current = setTimeout(() => { isLongPress.current = true; setTastingMenuIdx(idx); if (navigator.vibrate) navigator.vibrate(50); }, 2000); };
         const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+
+        const handleBeanTouchStart = (id) => { isLongPress.current = false; longPressTimer.current = setTimeout(() => { isLongPress.current = true; setBeanMenuIdx(id); if (navigator.vibrate) navigator.vibrate(50); }, 2000); };
+        const handleBeanTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+
+        const handleBeanTextShare = async (bean) => {
+            const text = generateBeanShareText(bean);
+            if (navigator.share) {
+                try { await navigator.share({ text }); } catch (e) { console.log(e); }
+            }
+            else { try { await navigator.clipboard.writeText(text); showToastMsg("텍스트가 복사되었습니다."); } catch (e) { showToastMsg("복사 실패"); } }
+            setBeanMenuIdx(null);
+        };
+
+        const handleAppShare = async () => {
+            const bean = beans.find(b => b.id === beanMenuIdx);
+            if (!bean) return;
+
+            const shareObj = {
+                name: bean.name, country: bean.country, region: bean.region, variety: bean.variety,
+                processing: bean.processing, altitude: bean.altitude, roastingLevel: bean.roastingLevel,
+                producer: bean.producer, shop: bean.shop, roastingDate: bean.roastingDate,
+                purchaseDate: bean.purchaseDate, purchaseUrl: bean.purchaseUrl, price: bean.price,
+                weight: bean.weight, pricePerCup: bean.pricePerCup, notes: bean.notes,
+                flavorDesc: bean.flavorDesc, memo: bean.memo, isBlend: bean.isBlend, blendInfo: bean.blendInfo
+            };
+
+            try {
+                const json = JSON.stringify(shareObj);
+                const encoded = btoa(unescape(encodeURIComponent(json)));
+                const longUrl = `${window.location.href.split('?')[0]}?share=${encoded}`;
+                let shareUrl = longUrl;
+
+                try {
+                    showToastMsg("링크 단축 중...");
+                    const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`);
+                    if (res.ok) { const short = await res.text(); if(short.startsWith('http')) shareUrl = short; }
+                } catch(e) { console.log("Shortening failed"); }
+
+                if (navigator.share) { await navigator.share({ title: bean.name, text: `[BeanLog] ${bean.name} 원두 정보 공유`, url: shareUrl }); } 
+                else { await navigator.clipboard.writeText(shareUrl); showToastMsg("공유 링크가 복사되었습니다."); }
+            } catch (e) { console.error(e); showToastMsg("공유 실패"); }
+            setBeanMenuIdx(null);
+        };
+
+        const handleImportBean = async () => {
+            if (!importUrl.trim()) return;
+            showToastMsg("링크 정보를 확인하는 중...");
+            try {
+                let shareCode = null;
+                try {
+                    const urlObj = new URL(importUrl);
+                    shareCode = new URLSearchParams(urlObj.search).get('share');
+                } catch (e) {}
+
+                if (!shareCode) {
+                    try {
+                        const res = await fetch(`https://unshorten.me/json/${encodeURIComponent(importUrl)}`);
+                        if (res.ok) { const json = await res.json(); if (json.resolved_url) { shareCode = new URLSearchParams(new URL(json.resolved_url).search).get('share'); } }
+                    } catch (e) { console.log("Expansion failed"); }
+                }
+
+                if (shareCode) {
+                    const json = decodeURIComponent(escape(atob(shareCode)));
+                    const data = JSON.parse(json);
+                    setBeanForm(prev => ({ ...INITIAL_BEAN, ...data }));
+                    setTempOcrImage(null);
+                    updateView(VIEW.EDIT_BEAN);
+                    showToastMsg("원두 정보를 불러왔습니다.");
+                    setShowImportInput(false);
+                    setImportUrl("");
+                } else {
+                    showToastMsg("데이터를 찾을 수 없습니다. (긴 주소를 입력해주세요)");
+                }
+            } catch (e) { console.error(e); showToastMsg("오류가 발생했습니다."); }
+        };
 
         const handleShopChange = (e) => { const val = e.target.value; setBeanForm(prev => ({ ...prev, shop: val })); if (!beanForm.purchaseUrl) { const match = beans.find(b => b.shop && b.shop.toLowerCase() === val.toLowerCase() && b.purchaseUrl); if (match) { setBeanForm(prev => ({ ...prev, purchaseUrl: match.purchaseUrl })); showToastMsg(`URL 자동 입력: ${match.shop}`); } } };
         const sortedBeans = useMemo(() => { let result = beans; if (filterMode === 'BEAN') result = result.filter(b => b.weight); else if (filterMode === 'CUP') result = result.filter(b => b.pricePerCup); if (searchTerm.trim()) { const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0); result = result.filter(bean => { const text = [bean.name, bean.country, bean.region, bean.variety, bean.processing, bean.roastingLevel, bean.shop, bean.notes, bean.flavorDesc, bean.memo, ...(bean.tastings ? bean.tastings.map(t => `${t.notes} ${t.memo}`) : [])].join(" ").toLowerCase(); return terms.every(t => text.includes(t)); }); } return [...result].sort((a, b) => { switch (sortMode) { case SORT_MODE.PURCHASE_DESC: if (!a.purchaseDate) return 1; if (!b.purchaseDate) return -1; return b.purchaseDate.localeCompare(a.purchaseDate); case SORT_MODE.ROAST_DESC: if (!a.roastingDate) return 1; if (!b.roastingDate) return -1; return b.roastingDate.localeCompare(a.roastingDate); case SORT_MODE.SCORE_DESC: const scoreA = getMaxScoreVal(a.tastings); const scoreB = getMaxScoreVal(b.tastings); if (scoreA !== scoreB) return scoreB - scoreA; return b.id - a.id; case SORT_MODE.STATUS_ASC: const getRank = (item) => { const isBean = !!item.weight; if (isBean) return item.isFinished ? 1 : 0; return 2; }; const rankA = getRank(a); const rankB = getRank(b); if (rankA !== rankB) return rankA - rankB; return b.id - a.id; case SORT_MODE.CREATED_DESC: default: return b.id - a.id; } }); }, [beans, searchTerm, filterMode, sortMode]);
@@ -789,7 +933,15 @@
         return (
             <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 relative ${active ? 'block' : 'hidden'}`}>
                 {/* ... BeansTab Content ... */}
+                {showImportInput && (
+                    <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowImportInput(false)}>
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-xs rounded-2xl p-6 shadow-xl animate-pop space-y-4" onClick={e => e.stopPropagation()}>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">공유 링크로 원두 추가</h3><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-bold outline-none" placeholder="https://..." value={importUrl} onChange={(e) => setImportUrl(e.target.value)} /><div className="flex gap-2"><button onClick={() => setShowImportInput(false)} className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-xl font-bold">취소</button><button onClick={handleImportBean} className="flex-1 py-3 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold">불러오기</button></div>
+                        </div>
+                    </div>
+                )}
                 {cropImage && <ImageCropper imageSrc={cropImage} aspectRatio={cropRatio} onComplete={onCropFinish} onCancel={() => setCropImage(null)} />}
+                {shareBeanData && <BeanShareModal bean={shareBeanData} onClose={() => setShareBeanData(null)} />}
                 {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
                 {showFlavorPicker && (<FlavorPicker onClose={() => setShowFlavorPicker(false)} onConfirm={(text) => { if (pickerTarget === 'bean') { setBeanForm(prev => ({ ...prev, notes: text })); } else if (pickerTarget === 'tasting') { setTastingForm(prev => ({ ...prev, notes: text })); } setShowFlavorPicker(false); }} initialNotes={pickerTarget === 'bean' ? beanForm.notes : tastingForm.notes} />)}
                 
@@ -819,7 +971,18 @@
                                 <div><h1 className="text-2xl font-black font-brand flex items-center gap-1 dark:text-white">BeanLog <CustomBeanIcon size={24} className="text-[#4b2c20] dark:text-amber-500"/></h1><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-brand">Coffee bean archive</p></div>
                                 <div className="flex gap-2">
                                     <button onClick={pickRandomBean} className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center border border-amber-100 dark:border-amber-900/30 active:scale-95 transition-transform"><Sparkles size={18}/></button>
-                                    <button onClick={() => { setBeanForm({ ...INITIAL_BEAN }); setTempOcrImage(null); updateView(VIEW.EDIT_BEAN); }} className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 active:scale-95 transition-all"><Plus size={20}/></button>
+                                    <div className="relative">
+                                        <button onClick={() => setShowAddMenu(!showAddMenu)} className={`w-10 h-10 rounded-full flex items-center justify-center active:scale-95 transition-all ${showAddMenu ? 'bg-slate-900 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}><Plus size={20}/></button>
+                                        {showAddMenu && (
+                                            <>
+                                                <div className="fixed inset-0 z-20" onClick={() => setShowAddMenu(false)}></div>
+                                                <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border dark:border-slate-700 p-2 z-30 flex flex-col gap-1 animate-in slide-in-from-top-2">
+                                                    <button onClick={() => { setShowAddMenu(false); setBeanForm({ ...INITIAL_BEAN }); setTempOcrImage(null); updateView(VIEW.EDIT_BEAN); }} className="text-left px-3 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"><Plus size={16}/> 직접 추가</button>
+                                                    <button onClick={() => { setShowAddMenu(false); setShowImportInput(true); }} className="text-left px-3 py-3 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"><Link size={16}/> 링크로 추가</button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 pl-10 rounded-2xl text-sm font-bold outline-none" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />{searchTerm && <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} fill="currentColor" className="text-slate-300"/></button>}</div>
@@ -828,7 +991,12 @@
                         </header>
                         <main className="flex-1 p-4 space-y-4 overflow-y-auto pb-24" ref={mainRef}>
                             {sortedBeans.length === 0 ? <div className="py-20 text-center opacity-40 font-bold">{searchTerm ? "검색 결과 없음" : "기록이 없습니다"}</div> : sortedBeans.map(bean => (
-                                <div key={bean.id} onClick={() => { updateView(VIEW.DETAIL, bean.id); }} className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border dark:border-slate-800 flex items-start gap-4 active:scale-95 transition-transform">
+                                <div key={bean.id} 
+                                    className="bg-white dark:bg-slate-900 p-4 rounded-3xl shadow-sm border dark:border-slate-800 flex items-start gap-4 active:scale-95 transition-transform relative overflow-hidden select-none"
+                                    onTouchStart={() => handleBeanTouchStart(bean.id)} onTouchEnd={handleBeanTouchEnd} onMouseDown={() => handleBeanTouchStart(bean.id)} onMouseUp={handleBeanTouchEnd} onMouseLeave={handleBeanTouchEnd}
+                                    onContextMenu={(e) => { e.preventDefault(); setBeanMenuIdx(bean.id); }}
+                                    onClick={() => { if (isLongPress.current) return; if (beanMenuIdx !== null) { setBeanMenuIdx(null); return; } updateView(VIEW.DETAIL, bean.id); }}
+                                >
                                     <div className="flex flex-col items-center gap-1.5 shrink-0">
                                         <div className={`w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 overflow-hidden relative flex items-center justify-center ${bean.isFinished ? 'text-slate-300 dark:text-slate-600' : 'text-amber-800 dark:text-amber-500'}`}>{bean.mainImage ? <img src={bean.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={32}/>}</div>
                                         <div className="flex items-center gap-1">{bean.tastings.length > 0 && (<span className="bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 rounded-md text-[10px] font-bold flex items-center gap-0.5 border border-amber-100 dark:border-amber-900/30"><Star size={8} fill="currentColor"/> {getMaxScore(bean.tastings)}</span>)}{bean.isFinished ? <CustomBeanIcon size={14} className="text-slate-300 dark:text-slate-600"/> : (bean.weight ? <CustomBeanIcon size={14} className="text-amber-700 dark:text-amber-500"/> : <Coffee size={14} className="text-slate-700 dark:text-slate-400"/>)}</div>
@@ -838,6 +1006,14 @@
                                         <div className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-normal leading-relaxed break-words"><span className="font-bold text-slate-700 dark:text-slate-300">{bean.shop || "-"}</span><span className="mx-1">·</span>{bean.roastingLevel || "-"}<span className="mx-1">·</span>{bean.purchaseDate || "-"}{bean.weight && bean.roastingDate && <><span className="mx-1">·</span><span className="text-amber-600 dark:text-amber-500 font-bold">{getRoastAge(bean.roastingDate)}</span></>}</div>
                                         <div className="text-slate-400 text-xs mt-1 leading-tight line-clamp-2">{parseTags(listNoteMode === NOTE_MODE.TASTING ? (getBestTastingNote(bean.tastings) || bean.notes) : bean.notes).join(', ')}</div>
                                     </div>
+                                    {beanMenuIdx === bean.id && (
+                                        <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+                                            <button onClick={(e) => { e.stopPropagation(); setShareBeanData(bean); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div><span className="text-[10px] font-bold">원두 카드</span></button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleBeanTextShare(bean); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><FileText size={20}/></div><span className="text-[10px] font-bold">텍스트</span></button>
+                                            <button onClick={(e) => { e.stopPropagation(); handleAppShare(); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><Share2 size={20}/></div><span className="text-[10px] font-bold">앱 공유</span></button>
+                                            <button onClick={(e) => { e.stopPropagation(); setBeanMenuIdx(null); }} className="absolute top-0 right-0 p-4 text-slate-500 hover:text-slate-300"><X size={20}/></button>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </main>
@@ -971,7 +1147,7 @@
             { id: 2, title: "10g 푸어오버", bean: "10", water: "30 40 40 40", interval: "30 30 30", endTime: "2:10", memo: "" },
             { id: 3, title: "스위치 10g", bean: "10", water: "cl150 10g op", interval: "20 120", endTime: "3:20", memo: "스위치를 닫고 물을 한 번에 붓습니다." },
             { id: 4, title: "스위치 리버스 15g", bean: "15", water: "cl30 15g 30 op 170", interval: "30 30 30 10", endTime: "3:00", memo: "침출식과 투과식을 혼합한 방식입니다." },
-            { id: 5, title: "바리스타 테크닉", bean: "20", water: "c40 s60 ct60 st 100", interval: "40 40 40 10", endTime: "3:30", memo: "다양한 푸어링 기법 연습용 레시피입니다." }
+            { id: 5, title: "데모용", bean: "15", water: "cl30 15g s30st op ct170sw sw", interval: "3 3 3 3 3", endTime: "0:20", memo: "다양한 사용 예시 레시피입니다." }
         ];
 
         // Main Timer Logic
@@ -995,10 +1171,12 @@
         const showToastMsg = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
         useEffect(() => { 
-            const r = safeStorage.get(RECIPE_STORAGE_KEY); 
-            if(r && Array.isArray(r) && r.length > 0) setRecipes(r);
-            else setRecipes(DEFAULT_RECIPES); 
-        }, []);
+            if (active) {
+                const r = safeStorage.get(RECIPE_STORAGE_KEY); 
+                if(r && Array.isArray(r) && r.length > 0) setRecipes(r);
+                else setRecipes(DEFAULT_RECIPES); 
+            }
+        }, [active]);
 
         // Sync Timer State with App
         useEffect(() => {
@@ -1350,7 +1528,25 @@
         const [selectedYear, setSelectedYear] = useState('ALL');
         const [selectedMonth, setSelectedMonth] = useState('ALL');
         const scrollRef = useRef(null);
+        const [statDetail, setStatDetail] = useState(null);
         const [showExpenditurePopup, setShowExpenditurePopup] = useState(false);
+        const [shareData, setShareData] = useState(null);
+        const [tastingMenuIdx, setTastingMenuIdx] = useState(null);
+        const [toast, setToast] = useState(null);
+        const isLongPress = useRef(false);
+        const longPressTimer = useRef(null);
+
+        // [New] Handle History for Modals (Close on Back Button)
+        useEffect(() => {
+            if (!active) return;
+            const handlePop = (event) => {
+                const modal = event.state ? event.state.modal : null;
+                if (modal !== 'STAT_DETAIL' && statDetail) { setStatDetail(null); }
+                if (modal !== 'EXPENDITURE' && showExpenditurePopup) { setShowExpenditurePopup(false); }
+            };
+            window.addEventListener('popstate', handlePop);
+            return () => window.removeEventListener('popstate', handlePop);
+        }, [active, statDetail, showExpenditurePopup]);
 
         useEffect(() => {
             if (active) {
@@ -1360,6 +1556,70 @@
                 if (scrollRef.current) scrollRef.current.scrollTop = 0;
             }
         }, [active, navKey]);
+
+        const showToastMsg = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
+        const handleTouchStart = (idx) => { isLongPress.current = false; longPressTimer.current = setTimeout(() => { isLongPress.current = true; setTastingMenuIdx(idx); if (navigator.vibrate) navigator.vibrate(50); }, 600); };
+        const handleTouchEnd = () => { if (longPressTimer.current) clearTimeout(longPressTimer.current); };
+
+        const handleTextShare = async (tasting) => {
+            const bean = beans.find(b => b.id === tasting.beanId);
+            if (!bean) return;
+            const text = generateShareText(bean, tasting);
+            if (navigator.share) {
+                try { await navigator.share({ text }); } catch (e) { console.log(e); }
+            } else {
+                try { await navigator.clipboard.writeText(text); showToastMsg("텍스트가 복사되었습니다."); } catch (e) { showToastMsg("복사 실패"); }
+            }
+            setTastingMenuIdx(null);
+        };
+
+        const handleStatClick = (type) => {
+            const isMatch = (dateStr) => {
+                if (!dateStr) return false;
+                if (selectedYear === 'ALL') return true;
+                const [y, m] = dateStr.split('-');
+                if (y !== selectedYear) return false;
+                if (selectedMonth !== 'ALL' && m !== String(selectedMonth).padStart(2, '0')) return false;
+                return true;
+            };
+
+            let title = "";
+            let items = [];
+            let dataType = 'BEAN';
+
+            if (type === 'TOTAL_TASTINGS') {
+                title = "시음 기록 목록";
+                dataType = 'TASTING';
+                beans.forEach(b => {
+                    if (b.tastings) {
+                        b.tastings.forEach(t => {
+                            if (isMatch(t.date)) {
+                                items.push({ ...t, beanId: b.id, beanName: b.name });
+                            }
+                        });
+                    }
+                });
+                items.sort((a, b) => b.date.localeCompare(a.date));
+            } else {
+                const filteredBeans = beans.filter(b => isMatch(b.purchaseDate));
+                if (type === 'TOTAL_BEANS') {
+                    title = "총 원두 목록";
+                    items = filteredBeans.filter(b => parseFloat(b.weight) > 0);
+                } else if (type === 'ACTIVE_BEANS') {
+                    title = "보유 원두 목록";
+                    items = filteredBeans.filter(b => parseFloat(b.weight) > 0 && !b.isFinished);
+                } else if (type === 'SOLDOUT_BEANS') {
+                    title = "소진 원두 목록";
+                    items = filteredBeans.filter(b => parseFloat(b.weight) > 0 && b.isFinished);
+                } else if (type === 'TOTAL_CUPS') {
+                    title = "한잔 커피 목록";
+                    items = filteredBeans.filter(b => !parseFloat(b.weight));
+                }
+                items.sort((a, b) => (b.purchaseDate || "").localeCompare(a.purchaseDate || ""));
+            }
+            window.history.pushState({ tab: TAB.STATS, modal: 'STAT_DETAIL' }, '');
+            setStatDetail({ title, items, type: dataType });
+        };
 
         const stats = useMemo(() => {
             const isMatch = (dateStr) => {
@@ -1443,10 +1703,40 @@
 
         return (
             <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 ${active ? 'block' : 'hidden'}`}>
+                {toast && <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-xl z-[120] whitespace-nowrap animate-in fade-in slide-in-from-top-2">{toast}</div>}
+                {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
+                {statDetail && (
+                    <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
+                        <div className="bg-white dark:bg-slate-900 w-full max-w-sm h-[60vh] rounded-2xl shadow-xl animate-pop flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="flex justify-between items-center p-4 border-b dark:border-slate-800">
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{statDetail.title} <span className="text-sm font-normal text-slate-500">({statDetail.items.length})</span></h3>
+                                <button onClick={() => window.history.back()} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400"><X size={18}/></button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                                {statDetail.items.length === 0 ? <div className="text-center text-slate-400 py-10 text-sm">데이터가 없습니다.</div> : statDetail.items.map((item, i) => (
+                                    <div key={i} onClick={() => { if(statDetail.type === 'BEAN') onNavigateToBean(item.id); else onNavigateToBean(item.beanId, item); }} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-800 rounded-xl active:scale-95 transition-transform cursor-pointer">
+                                        {statDetail.type === 'BEAN' ? (
+                                            <>
+                                                <div className={`w-10 h-10 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden`}>{item.mainImage ? <img src={item.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={20} className="text-slate-300"/>}</div>
+                                                <div className="flex-1 min-w-0"><h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">{item.name}</h4><div className="text-xs text-slate-500 truncate">{item.shop || '-'} · {item.purchaseDate || '-'}</div></div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="w-10 h-10 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center shrink-0 font-black text-xs border dark:border-slate-600 dark:text-white">{getDisplayScore(item)}</div>
+                                                <div className="flex-1 min-w-0"><h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">{item.beanName}</h4><div className="text-xs text-slate-500 truncate">{item.date} · {item.notes || '-'}</div></div>
+                                            </>
+                                        )}
+                                        <ChevronRight size={16} className="text-slate-300"/>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {showExpenditurePopup && (
-                    <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowExpenditurePopup(false)}>
+                    <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
                         <div className="bg-white dark:bg-slate-900 w-full max-w-xs rounded-2xl p-6 shadow-xl animate-pop" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-900 dark:text-white">지출 상세</h3><button onClick={() => setShowExpenditurePopup(false)} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400"><X size={16}/></button></div>
+                            <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-900 dark:text-white">지출 상세</h3><button onClick={() => window.history.back()} className="p-1 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400"><X size={16}/></button></div>
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-800 rounded-xl"><span className="text-xs font-bold text-slate-500 dark:text-slate-400">총 지출</span><span className="text-lg font-black text-slate-900 dark:text-white">₩{stats.totalExpenditure.toLocaleString()}</span></div>
                                 <div className="flex justify-between items-center px-2"><span className="text-xs font-bold text-slate-400 flex items-center gap-1"><CustomBeanIcon size={12}/> 원두 구매</span><span className="text-sm font-bold text-slate-700 dark:text-slate-300">₩{stats.beanExpenditure.toLocaleString()}</span></div>
@@ -1460,12 +1750,12 @@
                     <section>
                         <div className="flex justify-between items-center mb-3 px-1 relative"><h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><BarChart3 size={14}/> Dashboard</h2><DashboardFilter selectedYear={selectedYear} onSelectYear={(y) => { setSelectedYear(y); setSelectedMonth('ALL'); }} availableYears={stats.availableYears} selectedMonth={selectedMonth} onSelectMonth={setSelectedMonth} availableMonths={stats.availableMonths} /></div>
                         <div className="grid grid-cols-2 gap-3">
-                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 총 원두`} value={stats.totalBeans} subValue={formatWeight(stats.totalWeight)} customIcon={<CustomBeanIcon size={20} className="text-amber-700"/>} color="bg-amber-100" />
-                            <StatCard label="누적 지출" value={`₩${stats.totalExpenditure.toLocaleString()}`} customIcon={<ShoppingBag size={18} className="text-green-700"/>} color="bg-green-100" onClick={() => setShowExpenditurePopup(true)} />
-                            <StatCard label="보유 원두" value={stats.activeBeans} customIcon={<CustomBeanIcon size={20} className="text-blue-600"/>} color="bg-blue-100" />
-                            <StatCard label="소진 원두" value={stats.soldOutBeans} subValue={formatWeight(stats.soldOutWeight)} customIcon={<CustomBeanIcon size={20} className="text-slate-500"/>} color="bg-slate-100" />
-                            <StatCard label="한잔 커피" value={stats.totalCups} customIcon={<Coffee size={18} className="text-orange-700"/>} color="bg-orange-100" subValue="Cups" />
-                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 시음`} value={stats.totalTastings} customIcon={<FileText size={18} className="text-purple-700"/>} color="bg-purple-100" subValue="Records" />
+                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 총 원두`} value={stats.totalBeans} subValue={formatWeight(stats.totalWeight)} customIcon={<CustomBeanIcon size={20} className="text-amber-700"/>} color="bg-amber-100" onClick={() => handleStatClick('TOTAL_BEANS')} />
+                            <StatCard label="누적 지출" value={`₩${stats.totalExpenditure.toLocaleString()}`} customIcon={<ShoppingBag size={18} className="text-green-700"/>} color="bg-green-100" onClick={() => { window.history.pushState({ tab: TAB.STATS, modal: 'EXPENDITURE' }, ''); setShowExpenditurePopup(true); }} />
+                            <StatCard label="보유 원두" value={stats.activeBeans} customIcon={<CustomBeanIcon size={20} className="text-blue-600"/>} color="bg-blue-100" onClick={() => handleStatClick('ACTIVE_BEANS')} />
+                            <StatCard label="소진 원두" value={stats.soldOutBeans} subValue={formatWeight(stats.soldOutWeight)} customIcon={<CustomBeanIcon size={20} className="text-slate-500"/>} color="bg-slate-100" onClick={() => handleStatClick('SOLDOUT_BEANS')} />
+                            <StatCard label="한잔 커피" value={stats.totalCups} customIcon={<Coffee size={18} className="text-orange-700"/>} color="bg-orange-100" subValue="Cups" onClick={() => handleStatClick('TOTAL_CUPS')} />
+                            <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 시음`} value={stats.totalTastings} customIcon={<FileText size={18} className="text-purple-700"/>} color="bg-purple-100" subValue="Records" onClick={() => handleStatClick('TOTAL_TASTINGS')} />
                         </div>
                     </section>
                     <section>
@@ -1477,9 +1767,21 @@
                         {selectedTastings.length > 0 ? (
                             <div className="space-y-3">
                                 {selectedTastings.map((t, idx) => (
-                                    <div key={idx} onClick={() => onNavigateToBean(t.beanId, t)} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 active:scale-95 transition-transform cursor-pointer hover:border-blue-100 dark:hover:border-blue-900">
+                                    <div key={idx} 
+                                        className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4 active:scale-95 transition-transform cursor-pointer hover:border-blue-100 dark:hover:border-blue-900 relative overflow-hidden select-none"
+                                        onTouchStart={() => handleTouchStart(idx)} onTouchEnd={handleTouchEnd} onMouseDown={() => handleTouchStart(idx)} onMouseUp={handleTouchEnd} onMouseLeave={handleTouchEnd}
+                                        onContextMenu={(e) => { e.preventDefault(); setTastingMenuIdx(idx); }}
+                                        onClick={() => { if (isLongPress.current) return; if (tastingMenuIdx !== null) { setTastingMenuIdx(null); return; } onNavigateToBean(t.beanId, t); }}
+                                    >
                                         <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center font-black text-sm text-slate-900 dark:text-white border border-slate-100 dark:border-slate-800 shrink-0 shadow-sm">{getDisplayScore(t)}</div>
                                         <div className="flex-1 min-w-0"><h4 className="font-bold text-slate-900 dark:text-white truncate text-sm mb-0.5">{t.beanName}</h4><div className="flex items-center gap-1.5"><span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1 py-0.5 rounded font-bold">Flavor</span><p className="text-xs text-slate-400 truncate flex-1">{t.notes || "-"}</p></div></div><ChevronRight size={16} className="text-slate-300"/>
+                                        {tastingMenuIdx === idx && (
+                                            <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+                                                <button onClick={(e) => { e.stopPropagation(); const bean = beans.find(b => b.id === t.beanId); if(bean) setShareData({ bean, tasting: t }); setTastingMenuIdx(null); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div><span className="text-[10px] font-bold">이미지 공유</span></button>
+                                                <button onClick={(e) => { e.stopPropagation(); handleTextShare(t); }} className="flex flex-col items-center text-white gap-1"><div className="p-2 bg-slate-800 rounded-full"><FileText size={20}/></div><span className="text-[10px] font-bold">텍스트 공유</span></button>
+                                                <button onClick={(e) => { e.stopPropagation(); setTastingMenuIdx(null); }} className="absolute top-0 right-0 p-4 text-slate-500 hover:text-slate-300"><X size={20}/></button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -1518,7 +1820,7 @@
                 </header>
                 <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); safeStorage.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
-                    <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={onLoadDemoData} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Sparkles size={18}/> 데모 데이터 적용</button><button onClick={backup} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept=".json" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
+                    <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={onLoadDemoData} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Sparkles size={18}/> 데모 데이터 적용</button><button onClick={backup} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept="file" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
                     <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://github.com/imonraside/beanlog" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
                     <div className="pt-10 text-center"><p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">BeanLog {APP_VERSION}</p></div>
                 </div>
@@ -1681,8 +1983,9 @@
         };
         
         const handleNavigateToTasting = (beanId, tasting) => {
-             window.history.pushState({ tab: TAB.BEANS, view: 'EDIT_TASTING', id: beanId }, '');
-             setNavProps({ view: 'EDIT_TASTING', beanId: beanId, tasting: tasting });
+             const view = tasting ? 'EDIT_TASTING' : 'DETAIL';
+             window.history.pushState({ tab: TAB.BEANS, view: view, id: beanId }, '');
+             setNavProps({ view: view, beanId: beanId, tasting: tasting });
              setTab(TAB.BEANS);
         };
 
