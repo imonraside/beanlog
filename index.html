@@ -85,7 +85,7 @@
     // --- 1. GLOBAL HELPERS & CONSTANTS ---
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL";
     const RECIPE_STORAGE_KEY = `${STORAGE_KEY}_recipes`;
-    const APP_VERSION = "v1.1.1";
+    const APP_VERSION = "v1.1.2";
     const TAB = { BEANS: 'BEANS', TIMER: 'TIMER', STATS: 'STATS', SETTINGS: 'SETTINGS' };
     
     const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, isBlend: false, blendInfo: [], mainImage: null, ocrImage: null, tastings: [] };
@@ -704,7 +704,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             const shareCode = params.get('share');
             if (shareCode) {
                 try {
-                    const json = decodeURIComponent(escape(atob(shareCode)));
+                    const json = decodeURIComponent(escape(atob(shareCode.replace(/ /g, '+'))));
                     const data = JSON.parse(json);
                     setBeanForm(prev => ({ ...INITIAL_BEAN, ...data })); 
                     setTempOcrImage(null);
@@ -878,7 +878,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             try {
                 const json = JSON.stringify(shareObj);
                 const encoded = btoa(unescape(encodeURIComponent(json)));
-                const longUrl = `${window.location.href.split('?')[0]}?share=${encoded}`;
+                const longUrl = `${window.location.href.split('?')[0]}?share=${encodeURIComponent(encoded)}`;
                 let shareUrl = longUrl;
 
                 try {
@@ -911,7 +911,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                 }
 
                 if (shareCode) {
-                    const json = decodeURIComponent(escape(atob(shareCode)));
+                    const json = decodeURIComponent(escape(atob(shareCode.replace(/ /g, '+'))));
                     const data = JSON.parse(json);
                     setBeanForm(prev => ({ ...INITIAL_BEAN, ...data }));
                     setTempOcrImage(null);
