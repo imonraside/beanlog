@@ -85,7 +85,7 @@
     // --- 1. GLOBAL HELPERS & CONSTANTS ---
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL";
     const RECIPE_STORAGE_KEY = `${STORAGE_KEY}_recipes`;
-    const APP_VERSION = "v1.1.2";
+    const APP_VERSION = "v1.1.3";
     const TAB = { BEANS: 'BEANS', TIMER: 'TIMER', STATS: 'STATS', SETTINGS: 'SETTINGS' };
     
     const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, isBlend: false, blendInfo: [], mainImage: null, ocrImage: null, tastings: [] };
@@ -608,7 +608,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                      mainRef.current.scrollTop = scrollMap.current[key] || 0;
                  });
             }
-        }, [active, view, selectedId]);
+        }, [view, selectedId]);
 
         const updateView = (newView, id = null) => {
             saveScrollPosition(view, selectedId);
@@ -1821,7 +1821,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                 <div className="p-6 space-y-6 flex-1 overflow-y-auto">
                     <div className="space-y-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); safeStorage.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
                     <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={onLoadDemoData} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Sparkles size={18}/> 데모 데이터 적용</button><button onClick={backup} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept="file" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
-                    <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://github.com/imonraside/beanlog" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
+                    <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://imonraside.github.io/beanlog/guide/" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
                     <div className="pt-10 text-center"><p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">BeanLog {APP_VERSION}</p></div>
                 </div>
             </div>
