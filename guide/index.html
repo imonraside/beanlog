@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BeanLog - 나만의 커피 아카이브 & 브루잉 타이머</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1, h2, h3 { color: #2c3e50; margin-top: 1.5em; margin-bottom: 0.5em; }
+        h1 { font-size: 2.5em; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        h2 { font-size: 1.75em; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        h3 { font-size: 1.25em; }
+        a { color: #3498db; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        ul, ol { padding-left: 20px; }
+        li { margin-bottom: 5px; }
+        code { background-color: #f8f9fa; padding: 2px 4px; border-radius: 4px; font-family: "Roboto Mono", monospace; font-size: 0.9em; color: #e83e8c; }
+        pre { background-color: #f8f9fa; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #e9ecef; }
+        pre code { background-color: transparent; padding: 0; color: #333; }
+        table { border-collapse: collapse; width: 100%; margin: 20px 0; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #f8f9fa; font-weight: bold; text-align: center; }
+        td { text-align: center; }
+        td:last-child { text-align: left; }
+        hr { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
+        blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 15px; color: #666; }
+        .emoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; }
+    </style>
+</head>
+<body>
+
+<h1>☕ BeanLog - 나만의 커피 아카이브 &amp; 브루잉 타이머</h1>
+
+<p><strong>서비스 접속:</strong> <a href="https://imonraside.github.io/beanlog">https://imonraside.github.io/beanlog</a></p>
+
+<p><strong>BeanLog</strong>는 커피 애호가를 위한 올인원 기록 앱입니다. 원두 구매부터 시음 노트 작성, 그리고 정교한 브루잉 타이머까지 하나의 앱에서 관리하세요. PWA(Progressive Web App) 기술로 제작되어 별도의 스토어 다운로드 없이 웹에서 바로 설치하여 네이티브 앱처럼 사용할 수 있습니다.</p>
+
+<hr>
+
+<h2>📚 목차</h2>
+
+<ol>
+    <li><a href="#-앱-설치-방법">앱 설치 방법</a></li>
+    <li><a href="#-주요-기능-소개">주요 기능 소개</a>
+        <ul>
+            <li><a href="#1-원두-아카이브-beans">원두 아카이브 (Beans)</a></li>
+            <li><a href="#2-시음-노트-tasting-note">시음 노트 (Tasting Note)</a></li>
+            <li><a href="#3-브루잉-타이머-brewing-timer">브루잉 타이머 (Brewing Timer)</a></li>
+            <li><a href="#4-인사이트-insights">인사이트 (Insights)</a></li>
+        </ul>
+    </li>
+    <li><a href="#-타이머-레시피-문법-가이드">타이머 레시피 문법 가이드</a></li>
+    <li><a href="#-설정-및-데이터-관리">설정 및 데이터 관리</a></li>
+    <li><a href="#-업데이트-내역">업데이트 내역</a></li>
+</ol>
+
+<hr>
+
+<h2 id="-앱-설치-방법">📲 앱 설치 방법</h2>
+
+<p>BeanLog는 <strong>PWA</strong> 앱입니다. 브라우저를 통해 <a href="https://imonraside.github.io/beanlog">서비스 주소</a>에 접속한 뒤 홈 화면에 추가하여 사용하세요.</p>
+
+<h3>Android (삼성 인터넷 / Chrome)</h3>
+<ol>
+    <li>브라우저 주소창 옆의 <strong>설치 아이콘(⬇️)</strong> 또는 하단의 <strong>'앱 다운로드'</strong> 배너를 클릭하세요.</li>
+    <li>또는 메뉴(⋮) &gt; <strong>'앱 설치'</strong> 혹은 <strong>'홈 화면에 추가'</strong>를 선택하세요.</li>
+</ol>
+
+<h3>iOS (Safari)</h3>
+<ol>
+    <li>Safari 브라우저 하단의 <strong>공유 버튼(네모 위 화살표)</strong>을 누르세요.</li>
+    <li>메뉴에서 <strong>'홈 화면에 추가'</strong>를 선택하세요.</li>
+</ol>
+
+<hr>
+
+<h2 id="-주요-기능-소개">🌟 주요 기능 소개</h2>
+
+<h3 id="1-원두-아카이브-beans">1. 원두 아카이브 (Beans)</h3>
+<p>내가 마신 원두의 정보를 체계적으로 기록하고 관리합니다.</p>
+<ul>
+    <li><strong>AI 자동 입력 (OCR):</strong> 원두 패키지 사진을 찍으면 AI(Gemini)가 원두 이름, 지역, 가공 방식, 컵 노트 등을 자동으로 분석하여 입력해 줍니다. (설정에서 API 키 필요)</li>
+    <li><strong>상세 정보 기록:</strong> 나라이름, 지역, 품종, 가공 방식, 고도, 로스팅 포인트, 구매처, 가격 등을 꼼꼼하게 기록할 수 있습니다.</li>
+    <li><strong>블렌드 정보:</strong> 블렌딩된 원두의 구성 비율과 품종 정보를 상세하게 기록할 수 있습니다.</li>
+    <li><strong>상태 및 정렬:</strong> 원두 소진 여부(Sold Out) 관리와 다양한 정렬(구매일, 평점, 로스팅순 등) 기능을 제공합니다.</li>
+    <li><strong>랜덤 픽 (Today's Pick):</strong> 무엇을 마실지 고민될 때, 보유 중인 원두 중 하나를 추천해 줍니다. (메인 화면 ✨ 아이콘)</li>
+    <li><strong>원두 공유:</strong> 원두 정보를 <strong>이미지 카드</strong>, <strong>텍스트</strong>, 또는 <strong>링크</strong>로 공유할 수 있습니다. 특히 링크 공유 기능을 사용하면, 친구가 링크를 클릭하는 것만으로 내 원두 정보를 자신의 앱에 바로 저장할 수 있습니다.</li>
+</ul>
+
+<h3 id="2-시음-노트-tasting-note">2. 시음 노트 (Tasting Note)</h3>
+<p>커피의 맛을 감각적으로 기록하고 공유하세요.</p>
+<ul>
+    <li><strong>레이더 차트:</strong> 산미, 밸런스, 단맛, 클린컵, 바디, 향미 6가지 항목을 점수화하여 시각적인 오각형 차트로 보여줍니다.</li>
+    <li><strong>플레이버 피커 (Flavor Picker):</strong> 과일, 꽃, 견과류 등 8가지 카테고리, 80여 개의 향미 태그를 터치만으로 간편하게 선택할 수 있습니다.</li>
+    <li><strong>시음 기록 공유:</strong> 내가 기록한 맛 점수(레이더 차트)와 노트가 담긴 <strong>이미지 카드</strong>를 생성하여 인스타그램 등에 공유하거나, 상세 내용을 텍스트로 복사할 수 있습니다.</li>
+</ul>
+
+<h3 id="3-브루잉-타이머-brewing-timer">3. 브루잉 타이머 (Brewing Timer)</h3>
+<p>복잡한 레시피도 실수 없이 내릴 수 있도록 도와줍니다.</p>
+<ul>
+    <li><strong>단계별 가이드:</strong> 물 붓는 양, 시간, 행동(젓기, 스위치 조작 등)을 단계별로 큰 화면으로 안내합니다.</li>
+    <li><strong>커스텀 레시피:</strong> 나만의 레시피를 특수 문법을 사용해 자유롭게 만들고 저장할 수 있습니다.</li>
+    <li><strong>음성/화면 유지:</strong> 타이머 작동 중에는 화면이 꺼지지 않습니다. (Wake Lock 지원)</li>
+</ul>
+
+<h3 id="4-인사이트-insights">4. 인사이트 (Insights)</h3>
+<p>나의 커피 생활을 통계로 확인하세요.</p>
+<ul>
+    <li><strong>대시보드:</strong> 누적 구매량, 소비량, 총 시음 횟수, 보유 원두 현황 등을 한눈에 볼 수 있습니다.</li>
+    <li><strong>지출 분석:</strong> 원두 구매 비용과 카페 음료 지출을 구분하여 상세한 금액 통계를 제공합니다.</li>
+    <li><strong>커피 캘린더:</strong> 언제 커피를 마셨는지 히트맵(Heatmap) 달력으로 보여줍니다.</li>
+    <li><strong>기록 탐색:</strong> 달력의 날짜를 누르면 그날 마신 커피 기록으로 바로 이동합니다.</li>
+</ul>
+
+<hr>
+
+<h2 id="-타이머-레시피-문법-가이드">⏱️ 타이머 레시피 문법 가이드</h2>
+
+<p>BeanLog 타이머는 텍스트만 입력하면 자동으로 단계를 생성하는 강력한 파싱 기능을 제공합니다.</p>
+
+<h3>기본 구조</h3>
+<ul>
+    <li><strong>원두:</strong> <code>20</code> (숫자만 입력 시 g 단위 자동 인식)</li>
+    <li><strong>물:</strong> <code>60 80 80 80</code> (띄어쓰기로 구분하면 단계별 물 투입량이 됩니다)</li>
+    <li><strong>시간:</strong> <code>30 40 40</code> (각 단계별 소요 시간, 초 단위)</li>
+    <li><strong>종료 시간:</strong> <code>3:00</code> (종료 시간, 분 단위 or 초 단위)</li>
+</ul>
+
+<h3>고급 명령어 (특수 동작)</h3>
+<p>물 투입량 옆에 아래 코드를 붙여서 특수 동작을 지정할 수 있습니다.</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>코드</th>
+            <th>동작</th>
+            <th>아이콘</th>
+            <th>설명</th>
+            <th>예시</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>cl</strong></td>
+            <td>Close</td>
+            <td>🔒</td>
+            <td>클레버/스위치 닫기</td>
+            <td><code>cl60</code> (닫고 60ml 붓기)</td>
+        </tr>
+        <tr>
+            <td><strong>op</strong></td>
+            <td>Open</td>
+            <td>🔓</td>
+            <td>클레버/스위치 열기</td>
+            <td><code>op</code> (추출구 열기)</td>
+        </tr>
+        <tr>
+            <td><strong>st</strong></td>
+            <td>Stir</td>
+            <td>🥄</td>
+            <td>교반 (젓기)</td>
+            <td><code>st</code> (스푼으로 젓기)</td>
+        </tr>
+        <tr>
+            <td><strong>sw</strong></td>
+            <td>Swirl</td>
+            <td>👋</td>
+            <td>스월링 (흔들기)</td>
+            <td><code>sw</code> (드리퍼 흔들기)</td>
+        </tr>
+        <tr>
+            <td><strong>c</strong></td>
+            <td>Circle</td>
+            <td>⭕</td>
+            <td>원형 푸어</td>
+            <td><code>c60</code> (원 그리며 60ml)</td>
+        </tr>
+        <tr>
+            <td><strong>s</strong></td>
+            <td>Spiral</td>
+            <td>🌀</td>
+            <td>나선형 푸어</td>
+            <td><code>s60</code> (나선형으로 60ml)</td>
+        </tr>
+        <tr>
+            <td><strong>ct</strong></td>
+            <td>Center</td>
+            <td>🎯</td>
+            <td>중앙 푸어</td>
+            <td><code>ct100</code> (가운데만 100ml)</td>
+        </tr>
+    </tbody>
+</table>
+
+<h4>📝 레시피 작성 예시</h4>
+<p><strong>[하리오 스위치 레시피]</strong></p>
+<ul>
+    <li><strong>물 입력:</strong> <code>cl60 60 op 100</code></li>
+    <li><strong>해석:</strong>
+        <ol>
+            <li>스위치를 <strong>닫고(cl)</strong> 물 <strong>60ml</strong> 투입</li>
+            <li>물 <strong>60ml</strong> 추가 투입</li>
+            <li>스위치를 <strong>열고(op)</strong></li>
+            <li>물 <strong>100ml</strong> 추가 투입</li>
+        </ol>
+    </li>
+</ul>
+
+<hr>
+
+<h2 id="-설정-및-데이터-관리">⚙️ 설정 및 데이터 관리</h2>
+
+<h3>Google Gemini API 설정 (AI OCR)</h3>
+<p>원두 사진 자동 분석 기능을 사용하려면 Google Gemini API 키가 필요합니다.</p>
+<ol>
+    <li><a href="https://aistudio.google.com/" target="_blank">Google AI Studio</a>에서 무료 API 키를 발급받으세요.</li>
+    <li>앱 내 <strong>설정(Settings)</strong> 탭 &gt; <strong>Gemini API Key</strong> 항목에 입력하세요.</li>
+    <li>키는 사용자의 브라우저(로컬 스토리지)에만 저장되며 외부로 전송되지 않습니다.</li>
+</ol>
+
+<h3>데이터 백업 및 복원</h3>
+<p>BeanLog는 서버 없이 동작하는 앱으로, 모든 데이터는 사용자의 <strong>브라우저 저장소(LocalStorage)</strong>에 저장됩니다. 브라우저 캐시나 데이터를 삭제하면 저장된 내용이 함께 사라질 수 있으므로, 중요한 데이터는 주기적으로 백업해 두는 것을 권장합니다.</p>
+<ul>
+    <li><strong>백업:</strong> 설정 탭에서 <strong>'통합 백업'</strong>을 누르면 <code>.json</code> 파일로 데이터가 다운로드됩니다.</li>
+    <li><strong>복원:</strong> <strong>'복원'</strong> 버튼을 눌러 백업 파일을 선택하면 데이터를 불러옵니다. (기기 변경 시 유용)</li>
+    <li><strong>데모 데이터:</strong> 앱의 기능을 미리 체험해볼 수 있도록 샘플 데이터를 제공합니다.</li>
+</ul>
+
+<hr>
+
+<h2 id="-업데이트-내역">🚀 업데이트 내역 (Changelog)</h2>
+
+<h3>v1.1.3</h3>
+<ul>
+    <li><strong>블렌드 정보 추가:</strong> 원두 등록 시 블렌딩 비율과 품종 정보를 상세하게 기록할 수 있습니다.</li>
+    <li><strong>지출 분석 기능:</strong> 통계 탭에서 원두 구매 비용과 카페 지출을 구분하여 볼 수 있습니다.</li>
+    <li><strong>공유 기능 강화:</strong> 원두 정보 및 시음 기록을 이미지 카드, 텍스트, 앱 링크로 공유할 수 있습니다.</li>
+    <li><strong>데모 데이터:</strong> 앱 기능을 미리 체험해볼 수 있는 샘플 데이터 추가 기능을 제공합니다.</li>
+    <li><strong>UI 개선:</strong> 다크 모드 지원 및 전반적인 디자인이 개선되었습니다.</li>
+</ul>
+
+<hr>
+
+<h3>💡 Tips</h3>
+<ul>
+    <li><strong>앱 아이콘:</strong> 홈 화면에 추가된 아이콘을 길게 누르면 앱 정보 등을 확인할 수 있습니다.</li>
+    <li><strong>간편 메뉴:</strong> 원두 목록이나 시음 기록을 <strong>길게 누르면(Long Press)</strong> 공유 및 삭제 메뉴가 나타납니다.</li>
+    <li><strong>검색:</strong> 원두 목록 상단의 검색창을 통해 원두 이름, 컵 노트, 지역 등을 검색할 수 있습니다.</li>
+    <li><strong>다크 모드:</strong> 시스템 설정을 따르거나, 설정 탭에서 라이트/다크 모드를 직접 선택할 수 있습니다.</li>
+</ul>
+
+<hr>
+
+<p>Designed &amp; Developed by <strong>BeanLog</strong></p>
+
+</body>
+</html>
