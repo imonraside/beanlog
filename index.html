@@ -85,7 +85,7 @@
     // --- 1. GLOBAL HELPERS & CONSTANTS ---
     const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL";
     const RECIPE_STORAGE_KEY = `${STORAGE_KEY}_recipes`;
-    const APP_VERSION = "v1.1.4";
+    const APP_VERSION = "v1.1.5";
     const TAB = { BEANS: 'BEANS', TIMER: 'TIMER', STATS: 'STATS', SETTINGS: 'SETTINGS' };
     
     const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, isBlend: false, blendInfo: [], mainImage: null, ocrImage: null, tastings: [] };
@@ -145,10 +145,28 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
       { id: 'sour', label: '산미/발효 (Sour)', color: 'bg-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-800 dark:text-yellow-300', subs: [ { group: '알콜/발효', items: ['와인', '위스키', '럼', '샴페인', '막걸리', '발효취', '뱅쇼'] }, { group: '산미/기타', items: ['식초', '요거트', '치즈', '시큼한', '고무', '약품'] } ] }
     ];
 
-    const safeStorage = {
-      get: (key) => { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } },
-      set: (key, value) => { try { localStorage.setItem(key, JSON.stringify(value)); return true; } catch { return false; } }
+    const idb = {
+        db: null,
+        init: () => new Promise((resolve, reject) => {
+            if(idb.db) return resolve(idb.db);
+            const req = indexedDB.open("BeanLogDB", 1);
+            req.onupgradeneeded = (e) => { const db = e.target.result; if(!db.objectStoreNames.contains("store")) db.createObjectStore("store"); };
+            req.onsuccess = (e) => { idb.db = e.target.result; resolve(idb.db); };
+            req.onerror = (e) => reject(e);
+        }),
+        get: async (key) => { await idb.init(); return new Promise(r => { const tx = idb.db.transaction("store", "readonly"); const req = tx.objectStore("store").get(key); req.onsuccess = () => r(req.result); req.onerror = () => r(null); }); },
+        set: async (key, val) => { await idb.init(); return new Promise(r => { const tx = idb.db.transaction("store", "readwrite"); const req = tx.objectStore("store").put(val, key); req.onsuccess = () => r(true); req.onerror = () => r(false); }); },
+        del: async (key) => { await idb.init(); return new Promise(r => { const tx = idb.db.transaction("store", "readwrite"); const req = tx.objectStore("store").delete(key); req.onsuccess = () => r(true); req.onerror = () => r(false); }); }
     };
+
+    const migrateStorage = async () => {
+        const keys = ["BEAN_LOG_MASTER_FINAL_data", "BEAN_LOG_MASTER_FINAL_recipes", "BEAN_LOG_MASTER_FINAL_key", "BEAN_LOG_MASTER_FINAL_theme", "BEAN_LOG_MASTER_FINAL_note_mode", "BEAN_LOG_MASTER_FINAL_sort_mode"];
+        for (const k of keys) {
+            const local = localStorage.getItem(k);
+            if (local) { try { const parsed = JSON.parse(local); const exists = await idb.get(k); if (!exists) { await idb.set(k, parsed); } } catch(e){} }
+        }
+    };
+
     const formatTime = (sec) => `${Math.floor(sec/60)}:${(sec%60)<10?'0':''}${sec%60}`;
     const calculateRatio = (b, w) => { 
         const bean = parseFloat(b)||0; if(bean===0) return "0:0"; 
@@ -742,14 +760,15 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
         };
 
         useEffect(() => {
-            try {
-              let loadedData = safeStorage.get(`${STORAGE_KEY}_data`);
-              if (Array.isArray(loadedData)) {
-                setBeans(loadedData.map(b => ({ ...INITIAL_BEAN, ...b, tastings: Array.isArray(b.tastings) ? b.tastings : [] })));
-              }
-              const savedNoteMode = safeStorage.get(`${STORAGE_KEY}_note_mode`); if (savedNoteMode) setListNoteMode(savedNoteMode);
-              const savedSortMode = safeStorage.get(`${STORAGE_KEY}_sort_mode`); if (savedSortMode) setSortMode(savedSortMode);
-            } catch (e) { console.error(e); }
+            const load = async () => {
+                try {
+                    const loadedData = await idb.get(`${STORAGE_KEY}_data`);
+                    if (Array.isArray(loadedData)) { setBeans(loadedData.map(b => ({ ...INITIAL_BEAN, ...b, tastings: Array.isArray(b.tastings) ? b.tastings : [] }))); }
+                    const savedNoteMode = await idb.get(`${STORAGE_KEY}_note_mode`); if (savedNoteMode) setListNoteMode(savedNoteMode);
+                    const savedSortMode = await idb.get(`${STORAGE_KEY}_sort_mode`); if (savedSortMode) setSortMode(savedSortMode);
+                } catch (e) { console.error(e); }
+            };
+            load();
         }, [active]);
 
         const showToastMsg = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
@@ -794,8 +813,8 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             }
         };
         
-        const saveData = (updatedBeans, nextId, isNew) => { 
-            if(safeStorage.set(`${STORAGE_KEY}_data`, updatedBeans)) { 
+        const saveData = async (updatedBeans, nextId, isNew) => { 
+            if(await idb.set(`${STORAGE_KEY}_data`, updatedBeans)) { 
                 setBeans(updatedBeans); setIsSaving(false); 
                 setTimeout(() => { 
                     setTempOcrImage(null); 
@@ -805,8 +824,8 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                         // 수정 모드에서 저장 후 뒤로가기 (상세 또는 이전 화면으로)
                         goBack();
                     }
-                }, 300); 
-            } else { setIsSaving(false); showToastMsg("용량 부족!"); } 
+                }, 100); 
+            } else { setIsSaving(false); showToastMsg("저장 실패!"); } 
         };
         
         const handleSaveBean = () => { 
@@ -822,7 +841,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
         };
 
         const handleSaveTasting = () => { if (!selectedId) return; setIsSaving(true); setTimeout(() => { const newBeans = beans.map(b => { if (String(b.id) === String(selectedId)) { const tList = [...b.tastings]; if (editTastingIdx !== null) tList[editTastingIdx] = tastingForm; else tList.unshift({ ...tastingForm, id: Date.now() }); return { ...b, tastings: tList }; } return b; }); saveData(newBeans, selectedId, false); }, 300); };
-        const handleDelete = () => { if (confirm("삭제하시겠습니까?")) { const newBeans = beans.filter(b => String(b.id) !== String(selectedId)); if (safeStorage.set(`${STORAGE_KEY}_data`, newBeans)) { setBeans(newBeans); updateView(VIEW.LIST); } } };
+        const handleDelete = async () => { if (confirm("삭제하시겠습니까?")) { const newBeans = beans.filter(b => String(b.id) !== String(selectedId)); if (await idb.set(`${STORAGE_KEY}_data`, newBeans)) { setBeans(newBeans); updateView(VIEW.LIST); } } };
         const handleDeleteTasting = () => { if (confirm("삭제?")) { const newBeans = beans.map(b => { if (String(b.id) === String(selectedId)) { return { ...b, tastings: b.tastings.filter((_, i) => i !== editTastingIdx) }; } return b; }); saveData(newBeans, selectedId, false); } };
         const updateScore = (id, delta) => { setTastingForm(prev => { let nextVal = prev.scores[id] + delta; if (nextVal < 0) nextVal = 0; if (nextVal > 10) nextVal = 10; nextVal = Math.round(nextVal * 10) / 10; return { ...prev, scores: { ...prev.scores, [id]: nextVal } }; }); };
         
@@ -930,7 +949,27 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
         };
 
         const handleShopChange = (e) => { const val = e.target.value; const match = beans.find(b => b.shop && b.shop.toLowerCase() === val.toLowerCase() && b.purchaseUrl); setBeanForm(prev => ({ ...prev, shop: val, purchaseUrl: match ? match.purchaseUrl : prev.purchaseUrl })); if (match && match.purchaseUrl !== beanForm.purchaseUrl) { showToastMsg(`URL 자동 입력: ${match.shop}`); } };
-        const sortedBeans = useMemo(() => { let result = beans; if (filterMode === 'BEAN') result = result.filter(b => b.weight); else if (filterMode === 'CUP') result = result.filter(b => b.pricePerCup); if (searchTerm.trim()) { const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0); result = result.filter(bean => { const text = [bean.name, bean.country, bean.region, bean.variety, bean.processing, bean.roastingLevel, bean.shop, bean.notes, bean.flavorDesc, bean.memo, ...(bean.tastings ? bean.tastings.map(t => `${t.notes} ${t.memo}`) : [])].join(" ").toLowerCase(); return terms.every(t => text.includes(t)); }); } return [...result].sort((a, b) => { switch (sortMode) { case SORT_MODE.PURCHASE_DESC: if (!a.purchaseDate) return 1; if (!b.purchaseDate) return -1; return b.purchaseDate.localeCompare(a.purchaseDate); case SORT_MODE.ROAST_DESC: if (!a.roastingDate) return 1; if (!b.roastingDate) return -1; return b.roastingDate.localeCompare(a.roastingDate); case SORT_MODE.SCORE_DESC: const scoreA = getMaxScoreVal(a.tastings); const scoreB = getMaxScoreVal(b.tastings); if (scoreA !== scoreB) return scoreB - scoreA; return b.id - a.id; case SORT_MODE.STATUS_ASC: const getRank = (item) => { const isBean = !!item.weight; if (isBean) return item.isFinished ? 1 : 0; return 2; }; const rankA = getRank(a); const rankB = getRank(b); if (rankA !== rankB) return rankA - rankB; return b.id - a.id; case SORT_MODE.CREATED_DESC: default: return b.id - a.id; } }); }, [beans, searchTerm, filterMode, sortMode]);
+        const sortedBeans = useMemo(() => { 
+            let result = beans; 
+            if (filterMode === 'BEAN') result = result.filter(b => b.weight); 
+            else if (filterMode === 'CUP') result = result.filter(b => b.pricePerCup); 
+            if (searchTerm.trim()) { 
+                const terms = searchTerm.toLowerCase().split(/\s+/).filter(t => t.length > 0); 
+                result = result.filter(bean => { const text = [bean.name, bean.country, bean.region, bean.variety, bean.processing, bean.roastingLevel, bean.shop, bean.notes, bean.flavorDesc, bean.memo, ...(bean.tastings ? bean.tastings.map(t => `${t.notes} ${t.memo}`) : [])].join(" ").toLowerCase(); return terms.every(t => text.includes(t)); }); 
+            } 
+            return [...result].sort((a, b) => { 
+                switch (sortMode) { 
+                    case SORT_MODE.PURCHASE_DESC: if (!a.purchaseDate) return 1; if (!b.purchaseDate) return -1; return b.purchaseDate.localeCompare(a.purchaseDate); 
+                    case SORT_MODE.ROAST_DESC: 
+                        const wA = parseFloat(a.weight)||0; const wB = parseFloat(b.weight)||0; 
+                        if(wA>0 && wB===0) return -1; if(wA===0 && wB>0) return 1; 
+                        if (!a.roastingDate) return 1; if (!b.roastingDate) return -1; return b.roastingDate.localeCompare(a.roastingDate); 
+                    case SORT_MODE.SCORE_DESC: const scoreA = getMaxScoreVal(a.tastings); const scoreB = getMaxScoreVal(b.tastings); if (scoreA !== scoreB) return scoreB - scoreA; return b.id - a.id; 
+                    case SORT_MODE.STATUS_ASC: const getRank = (item) => { const isBean = !!item.weight; if (isBean) return item.isFinished ? 1 : 0; return 2; }; const rankA = getRank(a); const rankB = getRank(b); if (rankA !== rankB) return rankA - rankB; return b.id - a.id; 
+                    case SORT_MODE.CREATED_DESC: default: return b.id - a.id; 
+                } 
+            }); 
+        }, [beans, searchTerm, filterMode, sortMode]);
 
         if(!active) return null;
 
@@ -990,7 +1029,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                                 </div>
                             </div>
                             <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><input className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 pl-10 rounded-2xl text-sm font-bold outline-none" placeholder="검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />{searchTerm && <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"><X size={16} fill="currentColor" className="text-slate-300"/></button>}</div>
-                            <div className="flex gap-2"><div className="flex-1 flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">{["ALL", "BEAN", "CUP"].map(mode => (<button key={mode} onClick={() => setFilterMode(mode)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filterMode === mode ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400'}`}>{mode === 'ALL' ? '전체' : (mode === 'BEAN' ? '원두' : '한잔')}</button>))}</div><button onClick={() => { const newMode = listNoteMode === NOTE_MODE.BEAN ? NOTE_MODE.TASTING : NOTE_MODE.BEAN; setListNoteMode(newMode); safeStorage.set(`${STORAGE_KEY}_note_mode`, newMode); showToastMsg(newMode === NOTE_MODE.BEAN ? "원두 노트 보기" : "시음 노트 보기"); }} className="px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">{listNoteMode === NOTE_MODE.BEAN ? <CustomBeanIcon size={18}/> : <Coffee size={18}/>}</button><div className="relative"><button onClick={() => setShowSortMenu(!showSortMenu)} className={`h-full px-3 rounded-xl flex items-center justify-center transition-colors ${showSortMenu ? 'bg-slate-900 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><ArrowUpDown size={16} /></button>{showSortMenu && (<><div className="fixed inset-0 z-20" onClick={() => setShowSortMenu(false)}></div><div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border dark:border-slate-700 p-2 z-30 flex flex-col gap-1 animate-in slide-in-from-top-2"><div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b dark:border-slate-700 mb-1">Sort By</div>{[SORT_MODE.CREATED_DESC, SORT_MODE.PURCHASE_DESC, SORT_MODE.ROAST_DESC, SORT_MODE.SCORE_DESC, SORT_MODE.STATUS_ASC].map(mode => (<button key={mode} onClick={() => { setSortMode(mode); safeStorage.set(`${STORAGE_KEY}_sort_mode`, mode); setShowSortMenu(false); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${sortMode === mode ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><span>{SORT_LABELS[mode]}</span> {sortMode === mode && <Check size={14}/>}</button>))}</div></>)}</div></div>
+                            <div className="flex gap-2"><div className="flex-1 flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">{["ALL", "BEAN", "CUP"].map(mode => (<button key={mode} onClick={() => setFilterMode(mode)} className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${filterMode === mode ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400'}`}>{mode === 'ALL' ? '전체' : (mode === 'BEAN' ? '원두' : '한잔')}</button>))}</div><button onClick={() => { const newMode = listNoteMode === NOTE_MODE.BEAN ? NOTE_MODE.TASTING : NOTE_MODE.BEAN; setListNoteMode(newMode); idb.set(`${STORAGE_KEY}_note_mode`, newMode); showToastMsg(newMode === NOTE_MODE.BEAN ? "원두 노트 보기" : "시음 노트 보기"); }} className="px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">{listNoteMode === NOTE_MODE.BEAN ? <CustomBeanIcon size={18}/> : <Coffee size={18}/>}</button><div className="relative"><button onClick={() => setShowSortMenu(!showSortMenu)} className={`h-full px-3 rounded-xl flex items-center justify-center transition-colors ${showSortMenu ? 'bg-slate-900 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'}`}><ArrowUpDown size={16} /></button>{showSortMenu && (<><div className="fixed inset-0 z-20" onClick={() => setShowSortMenu(false)}></div><div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border dark:border-slate-700 p-2 z-30 flex flex-col gap-1 animate-in slide-in-from-top-2"><div className="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b dark:border-slate-700 mb-1">Sort By</div>{[SORT_MODE.CREATED_DESC, SORT_MODE.PURCHASE_DESC, SORT_MODE.ROAST_DESC, SORT_MODE.SCORE_DESC, SORT_MODE.STATUS_ASC].map(mode => (<button key={mode} onClick={() => { setSortMode(mode); idb.set(`${STORAGE_KEY}_sort_mode`, mode); setShowSortMenu(false); }} className={`text-left px-3 py-2 rounded-lg text-xs font-bold flex items-center justify-between ${sortMode === mode ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-700'}`}><span>{SORT_LABELS[mode]}</span> {sortMode === mode && <Check size={14}/>}</button>))}</div></>)}</div></div>
                             {sortMode !== SORT_MODE.CREATED_DESC && <div className="flex justify-end"><span className="text-[10px] font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded flex items-center gap-1">{SORT_LABELS[sortMode]} 정렬 중 <ArrowUpDown size={10}/></span></div>}
                         </header>
                         <main className="flex-1 p-4 space-y-4 overflow-y-auto pb-24" ref={mainRef}>
@@ -1064,7 +1103,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                                 {(activeBean.notes || activeBean.flavorDesc) && (<div className="bg-amber-50 dark:bg-amber-900/20 p-5 rounded-2xl border border-amber-100 dark:border-amber-900/30 relative"><Quote size={20} className="absolute top-4 right-4 text-amber-200 dark:text-amber-800 opacity-50" /><span className="text-[10px] font-bold text-amber-500 uppercase block mb-3">Flavor Notes</span><div className="flex flex-wrap gap-2 mb-3">{parseTags(activeBean.notes).map((note, idx) => (<span key={idx} className="bg-white dark:bg-slate-800 text-amber-800 dark:text-amber-400 px-3 py-1.5 rounded-full text-xs font-bold border border-amber-100 dark:border-amber-900/30 shadow-sm">{note}</span>))}</div>{activeBean.flavorDesc && <p className="text-amber-900 dark:text-amber-200 text-sm font-medium italic leading-relaxed border-t border-amber-200 dark:border-amber-900/30 pt-3 mt-2">{activeBean.flavorDesc}</p>}</div>)}
                                 <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-3"><div className="flex justify-between items-center"><h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1"><ShoppingBag size={12}/> Purchase Info</h3>{activeBean.purchaseUrl && (<button onClick={() => openLink(activeBean.purchaseUrl)} className="text-[10px] font-bold text-blue-500 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg flex items-center gap-1">구매처 방문 <ExternalLink size={10}/></button>)}</div><div className="flex justify-between items-center text-sm font-medium dark:text-slate-300"><span>구매처</span> <span className="font-bold dark:text-white">{activeBean.shop || '-'}</span></div><div className="flex justify-between items-center text-sm font-medium dark:text-slate-300"><span>구매일</span> <span className="font-bold dark:text-white">{activeBean.purchaseDate || '-'}</span></div>{activeBean.weight && activeBean.price && (<div className="flex justify-between items-center text-sm font-medium dark:text-slate-300"><span>가격 ({activeBean.weight}g)</span> <div className="text-right"><span className="font-bold block dark:text-white">{Number(activeBean.price).toLocaleString()}원</span><span className="text-[10px] text-slate-400">100g당 {calcPricePer100g(activeBean.price, activeBean.weight)}원</span></div></div>)}{activeBean.pricePerCup && (<div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-dashed dark:border-slate-800 dark:text-slate-300"><span>한 잔 가격</span> <span className="font-bold text-amber-700 dark:text-amber-500">{Number(activeBean.pricePerCup).toLocaleString()}원</span></div>)}</div>
                                 {activeBean.memo && <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm whitespace-pre-wrap">{activeBean.memo}</div>}
-                                <div className="pt-6 border-t dark:border-slate-800"><div className="flex justify-between items-center mb-4"><h2 className="font-black text-xl dark:text-white">시음 기록</h2><div className="flex gap-2"><button onClick={() => { const updatedBeans = beans.map(b => String(b.id) === String(activeBean.id) ? { ...b, isFinished: !b.isFinished } : b); if(safeStorage.set(`${STORAGE_KEY}_data`, updatedBeans)) { setBeans(updatedBeans); } }} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${activeBean.isFinished ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-transparent' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>{activeBean.isFinished ? "원두 소진됨" : "원두 보유 중"}</button><button onClick={() => { setTastingForm({...INITIAL_TASTING}); setEditTastingIdx(null); updateView(VIEW.EDIT_TASTING, activeBean.id); }} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-3 py-1.5 rounded-full text-xs font-bold">+ 추가</button></div></div>{activeBean.tastings.length === 0 ? <p className="text-center text-slate-400 text-xs py-4">기록이 없습니다.</p> : (<div className="space-y-3">{activeBean.tastings.map((t, idx) => (
+                                <div className="pt-6 border-t dark:border-slate-800"><div className="flex justify-between items-center mb-4"><h2 className="font-black text-xl dark:text-white">시음 기록</h2><div className="flex gap-2"><button onClick={async () => { const updatedBeans = beans.map(b => String(b.id) === String(activeBean.id) ? { ...b, isFinished: !b.isFinished } : b); if(await idb.set(`${STORAGE_KEY}_data`, updatedBeans)) { setBeans(updatedBeans); } }} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${activeBean.isFinished ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-transparent' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>{activeBean.isFinished ? "원두 소진됨" : "원두 보유 중"}</button><button onClick={() => { setTastingForm({...INITIAL_TASTING}); setEditTastingIdx(null); updateView(VIEW.EDIT_TASTING, activeBean.id); }} className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-3 py-1.5 rounded-full text-xs font-bold">+ 추가</button></div></div>{activeBean.tastings.length === 0 ? <p className="text-center text-slate-400 text-xs py-4">기록이 없습니다.</p> : (<div className="space-y-3">{activeBean.tastings.map((t, idx) => (
                                     <div key={idx} 
                                         className="bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border dark:border-slate-700 flex items-center gap-4 active:scale-95 cursor-pointer relative overflow-hidden select-none" 
                                         onTouchStart={() => handleTouchStart(idx)} onTouchEnd={handleTouchEnd} onMouseDown={() => handleTouchStart(idx)} onMouseUp={handleTouchEnd} onMouseLeave={handleTouchEnd}
@@ -1189,9 +1228,10 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
 
         useEffect(() => { 
             if (active) {
-                const r = safeStorage.get(RECIPE_STORAGE_KEY); 
-                if(r && Array.isArray(r) && r.length > 0) setRecipes(r);
-                else setRecipes(DEFAULT_RECIPES); 
+                idb.get(RECIPE_STORAGE_KEY).then(r => {
+                    if(r && Array.isArray(r) && r.length > 0) setRecipes(r);
+                    else setRecipes(DEFAULT_RECIPES); 
+                });
             }
         }, [active]);
 
@@ -1277,7 +1317,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             setShowSaveModal(true);
         };
 
-        const confirmSave = (isOverwrite) => {
+        const confirmSave = async (isOverwrite) => {
             let updatedRecipes;
             if (isOverwrite && recipe.id) {
                 updatedRecipes = recipes.map(r => r.id === recipe.id ? recipe : r);
@@ -1285,7 +1325,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                 updatedRecipes = [...recipes, { ...recipe, id: Date.now() }];
             }
             setRecipes(updatedRecipes);
-            safeStorage.set(RECIPE_STORAGE_KEY, updatedRecipes);
+            await idb.set(RECIPE_STORAGE_KEY, updatedRecipes);
             // Close modal by going back
             window.history.back();
         };
@@ -1311,11 +1351,11 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             setShowDeleteModal(true);
         };
         
-        const confirmDelete = () => {
+        const confirmDelete = async () => {
             if (deleteTargetId) {
                 const n = recipes.filter(r => r.id !== deleteTargetId);
                 setRecipes(n);
-                safeStorage.set(RECIPE_STORAGE_KEY, n);
+                await idb.set(RECIPE_STORAGE_KEY, n);
             }
             window.history.back();
         };
@@ -1565,12 +1605,20 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             return () => window.removeEventListener('popstate', handlePop);
         }, [active, statDetail, showExpenditurePopup]);
 
+        // [Fix] Close popups when tab becomes inactive
+        useEffect(() => {
+            if (!active) {
+                setStatDetail(null);
+                setShowExpenditurePopup(false);
+            }
+        }, [active]);
+
         useEffect(() => {
             if (active) {
-                const data = safeStorage.get(`${STORAGE_KEY}_data`);
-                if (Array.isArray(data)) setBeans(data);
-                // [Fix] Reset scroll when Stats tab becomes active (via tab bar)
-                if (scrollRef.current) scrollRef.current.scrollTop = 0;
+                idb.get(`${STORAGE_KEY}_data`).then(data => {
+                    if (Array.isArray(data)) setBeans(data);
+                    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+                });
             }
         }, [active, navKey]);
 
@@ -1630,7 +1678,12 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                     items = filteredBeans.filter(b => parseFloat(b.weight) > 0 && b.isFinished);
                 } else if (type === 'TOTAL_CUPS') {
                     title = "한잔 커피 목록";
-                    items = filteredBeans.filter(b => !parseFloat(b.weight));
+                    items = filteredBeans.filter(b => {
+                        const weight = parseFloat(b.weight) || 0;
+                        const price = parseFloat(b.price) || 0;
+                        const pricePerCup = parseFloat(b.pricePerCup) || 0;
+                        return pricePerCup > 0 || (weight === 0 && price > 0);
+                    });
                 }
                 items.sort((a, b) => (b.purchaseDate || "").localeCompare(a.purchaseDate || ""));
             }
@@ -1650,24 +1703,38 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
             const filteredBeans = beans.filter(b => isMatch(b.purchaseDate));
             
             const isBean = (b) => parseFloat(b.weight) > 0;
-            const beanEntries = filteredBeans.filter(isBean);
-            const cupEntries = filteredBeans.filter(b => !isBean(b));
-
-            const totalBeans = beanEntries.length;
-            const totalWeight = beanEntries.reduce((acc, b) => acc + (parseFloat(b.weight)||0), 0);
-            const activeBeans = beanEntries.filter(b => !b.isFinished).length;
-            const soldOutBeans = beanEntries.filter(b => b.isFinished).length;
-            const soldOutWeight = beanEntries.filter(b => b.isFinished).reduce((acc, b) => acc + (parseFloat(b.weight)||0), 0);
-            const totalCups = cupEntries.length;
-
+            
+            let totalBeans = 0;
+            let totalWeight = 0;
+            let activeBeans = 0;
+            let soldOutBeans = 0;
+            let soldOutWeight = 0;
+            let totalCups = 0;
             let totalExpenditure = 0;
             let beanExpenditure = 0;
             let coffeeExpenditure = 0;
+
             filteredBeans.forEach(b => {
+                const weight = parseFloat(b.weight) || 0;
+                const price = parseFloat(b.price) || 0;
+                const pricePerCup = parseFloat(b.pricePerCup) || 0;
+                
                 if (isBean(b)) {
-                    const p = (parseFloat(b.price) || 0); beanExpenditure += p; totalExpenditure += p;
-                } else {
-                    const p = (parseFloat(b.pricePerCup) || parseFloat(b.price) || 0); coffeeExpenditure += p; totalExpenditure += p;
+                    totalBeans++;
+                    totalWeight += weight;
+                    if (b.isFinished) { soldOutBeans++; soldOutWeight += weight; } else { activeBeans++; }
+                    beanExpenditure += price;
+                    totalExpenditure += price;
+                }
+
+                if (pricePerCup > 0) {
+                    totalCups++;
+                    coffeeExpenditure += pricePerCup;
+                    totalExpenditure += pricePerCup;
+                } else if (!isBean(b) && price > 0) {
+                    totalCups++;
+                    coffeeExpenditure += price;
+                    totalExpenditure += price;
                 }
             });
             
@@ -1812,16 +1879,16 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
     const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, onToggleTheme, onLoadDemoData }) => {
         if (!active && !apiKey) return null;
 
-        const backup = () => {
-            const data = { beans: safeStorage.get(`${STORAGE_KEY}_data`), recipes: safeStorage.get(RECIPE_STORAGE_KEY), key: safeStorage.get(`${STORAGE_KEY}_key`) };
+        const backup = async () => {
+            const data = { beans: await idb.get(`${STORAGE_KEY}_data`), recipes: await idb.get(RECIPE_STORAGE_KEY), key: await idb.get(`${STORAGE_KEY}_key`) };
             const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
             const a = document.createElement('a'); a.href=url; a.download=`beanlog_v2_backup_${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a);
         };
         const restore = (e) => {
             const f = e.target.files[0]; if (!f || !confirm("현재 데이터를 덮어씌웁니다. 진행할까요?")) return;
-            const r = new FileReader(); r.onload = (ev) => { try { const d = JSON.parse(ev.target.result); if (d.beans) { safeStorage.set(`${STORAGE_KEY}_data`, d.beans); alert("원두 데이터 복원 완료"); } if (d.recipes) { safeStorage.set(RECIPE_STORAGE_KEY, d.recipes); alert("레시피 데이터 복원 완료"); } if (d.key) { safeStorage.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); } } catch (e) { alert("파일 오류"); } }; r.readAsText(f);
+            const r = new FileReader(); r.onload = async (ev) => { try { const d = JSON.parse(ev.target.result); if (d.beans) { await idb.set(`${STORAGE_KEY}_data`, d.beans); alert("원두 데이터 복원 완료"); } if (d.recipes) { await idb.set(RECIPE_STORAGE_KEY, d.recipes); alert("레시피 데이터 복원 완료"); } if (d.key) { await idb.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); } } catch (e) { alert("파일 오류"); } }; r.readAsText(f);
         };
-        const reset = () => { if (confirm("모든 데이터가 삭제됩니다. 초기화하시겠습니까?")) { localStorage.removeItem(`${STORAGE_KEY}_data`); localStorage.removeItem(RECIPE_STORAGE_KEY); localStorage.removeItem(`${STORAGE_KEY}_key`); location.reload(); } };
+        const reset = async () => { if (confirm("모든 데이터가 삭제됩니다. 초기화하시겠습니까?")) { await idb.del(`${STORAGE_KEY}_data`); await idb.del(RECIPE_STORAGE_KEY); await idb.del(`${STORAGE_KEY}_key`); location.reload(); } };
 
         const getThemeIcon = () => {
             if (theme === 'DARK') return <Moon size={20} />;
@@ -1836,7 +1903,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
                     <button onClick={onToggleTheme} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">{getThemeIcon()}</button>
                 </header>
                 <div className="p-6 space-y-6 flex-1 overflow-y-auto">
-                    <div className="space-y-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); safeStorage.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
+                    <div className="space-y-2"><label className="text-xs font-bold text-slate-500 dark:text-slate-400">Gemini API Key</label><input type="password" className="w-full p-4 bg-slate-50 dark:bg-slate-800 dark:text-white rounded-2xl outline-none" value={apiKey} onChange={e=>{setApiKey(e.target.value); idb.set(`${STORAGE_KEY}_key`,e.target.value);}} placeholder="API Key 입력"/></div>
                     <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">데이터 관리</h3><button onClick={onLoadDemoData} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Sparkles size={18}/> 데모 데이터 적용</button><button onClick={backup} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Download size={18}/> 통합 백업</button><div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept="file" /><label htmlFor="rFile" className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> 복원</label></div><button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button></div>
                     <div className="pt-8 border-t dark:border-slate-800 space-y-3"><h3 className="font-bold text-sm">앱 관리</h3><a href="https://imonraside.github.io/beanlog/guide/" target="_blank" rel="noopener noreferrer" className="w-full py-4 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-2xl flex items-center justify-center gap-2"><HelpCircle size={18}/> 도움말 & 가이드</a><button onClick={() => window.location.reload()} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><RefreshCw size={18}/> 앱 새로고침</button></div>
                     <div className="pt-10 text-center"><p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">BeanLog {APP_VERSION}</p></div>
@@ -1948,7 +2015,7 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
         const [navProps, setNavProps] = useState(null);
         const [isTimerRunning, setIsTimerRunning] = useState(false);
         const [toast, setToast] = useState(null);
-        const [theme, setTheme] = useState(() => safeStorage.get(`${STORAGE_KEY}_theme`) || 'SYSTEM');
+        const [theme, setTheme] = useState('SYSTEM');
 
         useEffect(() => {
             const root = window.document.documentElement;
@@ -1963,16 +2030,16 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
 
         const toggleTheme = () => {
             const modes = ['LIGHT', 'DARK', 'SYSTEM']; const next = modes[(modes.indexOf(theme) + 1) % modes.length];
-            setTheme(next); safeStorage.set(`${STORAGE_KEY}_theme`, next); showToastMsg(`테마 변경: ${next === 'SYSTEM' ? '시스템 설정' : (next === 'DARK' ? '다크 모드' : '라이트 모드')}`);
+            setTheme(next); idb.set(`${STORAGE_KEY}_theme`, next); showToastMsg(`테마 변경: ${next === 'SYSTEM' ? '시스템 설정' : (next === 'DARK' ? '다크 모드' : '라이트 모드')}`);
         };
 
-        const loadDemoData = () => {
+        const loadDemoData = async () => {
             if (confirm("데모 데이터를 추가하시겠습니까? 기존 데이터에 데모용 원두와 시음 기록이 추가됩니다.")) {
-                const existingData = safeStorage.get(`${STORAGE_KEY}_data`) || [];
+                const existingData = await idb.get(`${STORAGE_KEY}_data`) || [];
                 const demoData = getDemoData();
                 const nonDemoData = existingData.filter(item => !String(item.id).startsWith('demo_'));
                 const newData = [...demoData, ...nonDemoData];
-                if (safeStorage.set(`${STORAGE_KEY}_data`, newData)) {
+                if (await idb.set(`${STORAGE_KEY}_data`, newData)) {
                     showToastMsg("데모 데이터 적용 완료! 앱을 새로고침합니다.");
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
@@ -1983,7 +2050,11 @@ ${bean.purchaseUrl ? `링크: ${bean.purchaseUrl}\n` : ''}
 
         const showToastMsg = (msg) => { setToast(msg); setTimeout(() => setToast(null), 3000); };
 
-        useEffect(() => { const k = safeStorage.get(`${STORAGE_KEY}_key`); if (k) setApiKey(k); }, []);
+        useEffect(() => { 
+            migrateStorage();
+            idb.get(`${STORAGE_KEY}_key`).then(k => { if (k) setApiKey(k); }); 
+            idb.get(`${STORAGE_KEY}_theme`).then(t => { if (t) setTheme(t); });
+        }, []);
 
         const updateTab = (newTab) => {
             if (newTab === TAB.TIMER && isTimerRunning) {
