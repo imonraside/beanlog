@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&family=Montserrat:wght@600;700;900&family=Roboto+Mono:wght@400;500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body { 
+    height: 100%; 
+    overflow: hidden; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans KR", sans-serif; 
+    background: #f8fafc;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .no-select { -webkit-user-select: none; user-select: none; }
+}
+
+/* Custom Animations */
+.animate-in { animation: fadeIn 0.3s ease-out forwards; }
+.animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.animate-pop { animation: pop 0.2s ease-out; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes pop { 0% { transform: scale(0.9); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+/* Timer Step Styles */
+.step-active { 
+  background-color: #ffffff; 
+  border-left-width: 6px; 
+  border-color: #3b82f6; 
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); 
+  transform: scale(1.02); 
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+}
+.step-inactive { 
+  border-left-width: 2px; 
+  border-color: transparent; 
+  opacity: 0.6; 
+  filter: grayscale(100%); 
+  transform: scale(1); 
+  transition: all 0.4s ease; 
+}
+
+/* Cropper Overrides */
+.cropper-view-box, .cropper-face { outline: 2px solid white; }
+.dot-line { border-bottom: 2px dotted #cbd5e1; flex: 1; margin: 0 6px; position: relative; top: -4px; }
+
+/* Loader Styles */
+.spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #333; border-radius: 50%; animation: spin 1s linear infinite; }
+.loader-white { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }

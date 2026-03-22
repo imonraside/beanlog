@@ -1,0 +1,22 @@
+import React, { useState } from 'react';
+import { X, Palette, Check } from 'lucide-react';
+import { FLAVOR_DATA } from './constants';
+import { parseTags } from './utils';
+
+export const FlavorPicker = ({ onClose, onConfirm, initialNotes = "" }) => {
+    const [activeTab, setActiveTab] = useState('fruity');
+    const [selectedNotes, setSelectedNotes] = useState(parseTags(initialNotes));
+    const toggleNote = (note) => setSelectedNotes(selectedNotes.includes(note) ? selectedNotes.filter(n => n !== note) : [...selectedNotes, note]);
+    const activeCategory = FLAVOR_DATA.find(d => d.id === activeTab);
+    
+    return (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center animate-in fade-in backdrop-blur-sm dark:bg-black/70" onClick={onClose}>
+            <div className="w-full max-w-md h-[85vh] sm:h-[700px] bg-white dark:bg-slate-900 sm:rounded-[32px] rounded-t-[32px] shadow-2xl flex flex-col relative animate-slide-up overflow-hidden font-sans" onClick={e=>e.stopPropagation()}>
+                <div className="p-5 pb-2 flex justify-between items-center bg-white dark:bg-slate-900 z-10 shrink-0"><div><h2 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2"><Palette size={20} className="text-indigo-500"/> Flavor Picker</h2><p className="text-xs text-slate-400 mt-1">원하는 맛을 터치하여 선택하세요.</p></div><button onClick={onClose} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"><X size={20}/></button></div>
+                <div className="border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0"><div className="flex overflow-x-auto no-scrollbar px-5 gap-2 pb-3 pt-1">{FLAVOR_DATA.map((cat) => (<button key={cat.id} onClick={() => setActiveTab(cat.id)} className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${activeTab === cat.id ? `${cat.color} text-white shadow-md scale-105` : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'}`}>{cat.label.split(' ')[0]}</button>))}</div></div>
+                <div className={`flex-1 overflow-y-auto p-5 pb-32 transition-colors duration-300 ${activeCategory.bg}`}>{activeCategory.subs.map((sub, idx) => (<div key={idx} className="mb-6 animate-pop" style={{ animationDelay: `${idx * 50}ms` }}><h3 className={`text-xs font-bold ${activeCategory.text} uppercase mb-2 ml-1 opacity-80 flex items-center gap-1`}><span className="w-1.5 h-1.5 rounded-full bg-current"></span> {sub.group}</h3><div className="flex flex-wrap gap-2">{sub.items.map((item) => { const isSelected = selectedNotes.includes(item); return (<button key={item} onClick={() => toggleNote(item)} className={`px-3 py-2 rounded-xl text-xs font-bold border-2 transition-all ${isSelected ? 'bg-slate-800 border-slate-800 text-white shadow-md scale-105' : 'bg-white border-transparent text-slate-600 hover:border-slate-200'}`}>{item}</button>) })}</div></div>))}</div>
+                <div className="absolute bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 p-5 z-20 pb-8 sm:pb-5 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]"><div className="flex overflow-x-auto no-scrollbar gap-2 mb-4 pb-1 min-h-[30px] items-center">{selectedNotes.length > 0 ? selectedNotes.map(note => (<span key={note} className="whitespace-nowrap px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-bold flex items-center gap-1 border border-slate-200 dark:border-slate-700 animate-pop">{note} <button onClick={() => toggleNote(note)}><X size={10} className="text-slate-400 hover:text-red-500"/></button></span>)) : <span className="text-xs text-slate-400">선택된 맛이 없습니다.</span>}</div><button onClick={() => onConfirm(selectedNotes.join(', '))} className="w-full bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2 hover:bg-slate-800 dark:hover:bg-slate-200"><Check size={18}/> {selectedNotes.length}개 선택 완료</button></div>
+            </div>
+        </div>
+    );
+};
