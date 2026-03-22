@@ -18,7 +18,8 @@ export default defineConfig({
       
       workbox: {
         // 오프라인에서 앱을 켜기 위해 필요한 모든 파일을 캐싱(저장)합니다.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        navigateFallbackDenylist: [/^\/beanlog\/guide/]
       }
     })
   ],
