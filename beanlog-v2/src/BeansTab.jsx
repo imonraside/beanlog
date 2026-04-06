@@ -3,7 +3,8 @@ import {
     Search, X, Check, ShoppingBag, Plus, Link, ExternalLink, Trash2, Camera, 
     FileText, CheckCircle2, RefreshCw, Zap, Calendar, Star, ChevronLeft, Quote, 
     StickyNote, MapPin, Tag, Layers, User, Mountain, Flame, Coffee, ArrowUpDown, 
-    Sparkles, Palette, Image as ImageIcon, Share2, Minus, Calculator, PenTool, ChevronRight, Gift 
+    Sparkles, Palette, Image as ImageIcon, Share2, Minus, Calculator, PenTool, ChevronRight, HeartHandshake,
+    Package2, Snowflake
 } from 'lucide-react';
 import { CustomBeanIcon } from './Icons';
 import { ImageCropper } from './ImageCropper';
@@ -50,6 +51,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
     const [selectedId, setSelectedId] = useState(null);
     const [editTastingIdx, setEditTastingIdx] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const [showSearchBar, setShowSearchBar] = useState(false);
     const [filterMode, setFilterMode] = useState("ALL");
     const [listNoteMode, setListNoteMode] = useState(NOTE_MODE.BEAN);
     const [sortMode, setSortMode] = useState(SORT_MODE.CREATED_DESC);
@@ -192,11 +194,12 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                     const targetTasting = navProps.tasting || (targetBean.tastings ? targetBean.tastings[0] : null);
                     if (targetTasting) { 
                         setSelectedId(navProps.beanId); 
-                        const tIdx = targetBean.tastings.findIndex(t => 
+                        const tIdx = targetTasting._isNew ? -1 : targetBean.tastings.findIndex(t => 
+                            (t.id && targetTasting.id && t.id === targetTasting.id) ||
                             t === targetTasting || 
-                            (t.date === targetTasting.date && JSON.stringify(t.scores) === JSON.stringify(targetTasting.scores))
-                        ); 
-                        setEditTastingIdx(tIdx !== -1 ? tIdx : 0); 
+                            (t.date === targetTasting.date && JSON.stringify(t.scores) === JSON.stringify(targetTasting.scores) && t.notes === targetTasting.notes && t.desc === targetTasting.desc)
+                        );
+                        setEditTastingIdx(targetTasting._isNew ? null : (tIdx !== -1 ? tIdx : 0)); 
                         setTastingForm(targetTasting); 
                         setView(VIEW.EDIT_TASTING); 
                     } else { 
@@ -713,6 +716,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                     bean.name, bean.country, bean.region, bean.variety, 
                     bean.processing, bean.roastingLevel, bean.shop, bean.notes, 
                     bean.flavorDesc, bean.memo, 
+                    bean.storageState === 'VACUUM' ? '진포 진공' : (bean.storageState === 'FROZEN' ? '냉동' : '일반'),
                     ...(bean.tastings ? bean.tastings.map(t => `${t.notes} ${t.memo}`) : [])
                 ].join(" ").toLowerCase(); 
                 return terms.every(t => text.includes(t)); 
@@ -888,18 +892,52 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                 <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => setShowScorePopup(false)}>
                     <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-xl animate-pop space-y-6" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">점수 입력</h3>
+                            <div className="flex items-center gap-3">
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">점수 입력</h3>
+                                <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
+                                    <button 
+                                        onClick={() => setTastingForm(prev => ({ ...prev, isIntensity: false }))} 
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${!tastingForm.isIntensity ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                                    >
+                                        점수
+                                    </button>
+                                    <button 
+                                        onClick={() => setTastingForm(prev => ({ ...prev, isIntensity: true, isManualTotal: true }))} 
+                                        className={`px-3 py-1 text-xs font-bold rounded-md transition-colors ${tastingForm.isIntensity ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                                    >
+                                        세기
+                                    </button>
+                                </div>
+                            </div>
                             <button onClick={() => setShowScorePopup(false)} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"><X size={18}/></button>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
                             {TASTE_ITEMS.map(item => (
                                 <div key={item.id} className="bg-slate-50 dark:bg-slate-800 p-3 rounded-2xl flex flex-col items-center justify-center gap-2">
                                     <span className="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">{item.label}</span>
-                                    <div className="flex items-center gap-2">
-                                        <ScoreButton onClick={() => updateScore(item.id, -0.1)} icon={<Minus size={14} className="text-slate-400"/>} />
-                                        <input type="number" value={tastingForm.scores[item.id]} onChange={(e) => setTastingForm(prev => ({ ...prev, scores: { ...prev.scores, [item.id]: e.target.value } }))} className="w-12 text-center font-black text-xl bg-transparent outline-none p-0 m-0 border-0 focus:ring-0 dark:text-white" />
-                                        <ScoreButtonPlus onClick={() => updateScore(item.id, +0.1)} icon={<Plus size={14} className="text-white"/>} />
-                                    </div>
+                                    {!tastingForm.isIntensity ? (
+                                        <div className="flex items-center gap-2">
+                                            <ScoreButton onClick={() => updateScore(item.id, -0.1)} icon={<Minus size={14} className="text-slate-400"/>} />
+                                            <input type="number" value={tastingForm.scores[item.id]} onChange={(e) => setTastingForm(prev => ({ ...prev, scores: { ...prev.scores, [item.id]: e.target.value } }))} className="w-12 text-center font-black text-xl bg-transparent outline-none p-0 m-0 border-0 focus:ring-0 dark:text-white" />
+                                            <ScoreButtonPlus onClick={() => updateScore(item.id, +0.1)} icon={<Plus size={14} className="text-white"/>} />
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-1 w-full h-8 px-1">
+                                            {[1, 2, 3, 4, 5].map(level => {
+                                                const currentScore = parseFloat(tastingForm.scores[item.id]) || 0;
+                                                const isActive = Math.round(currentScore) >= level;
+                                                const isCurrent = Math.round(currentScore) === level;
+                                                const colors = ['bg-amber-200 dark:bg-amber-900/60', 'bg-amber-300 dark:bg-amber-800/80', 'bg-orange-400 dark:bg-orange-700', 'bg-orange-500 dark:bg-orange-600', 'bg-red-500 dark:bg-red-500'];
+                                                return (
+                                                    <button 
+                                                        key={level}
+                                                        onClick={() => setTastingForm(prev => ({ ...prev, scores: { ...prev.scores, [item.id]: level } }))}
+                                                        className={`flex-1 rounded-md transition-all h-full ${isActive ? colors[level-1] + ' shadow-sm' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600'} ${isCurrent ? 'scale-110 shadow-md ring-1 ring-black/5 dark:ring-white/10' : ''}`}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -919,6 +957,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest font-brand">Coffee bean archive</p>
                             </div>
                             <div className="flex gap-2">
+                                <button onClick={() => { if(showSearchBar) setSearchTerm(""); setShowSearchBar(!showSearchBar); }} className={`w-10 h-10 rounded-full flex items-center justify-center border transition-all active:scale-95 ${showSearchBar ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700'}`}><Search size={18}/></button>
                                 <button onClick={openShopList} className="w-10 h-10 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-700 active:scale-95 transition-transform"><ShoppingBag size={18}/></button>
                                 <button onClick={pickRandomBean} className="w-10 h-10 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center border border-amber-100 dark:border-amber-900/30 active:scale-95 transition-transform"><Sparkles size={18}/></button>
                                 <div className="relative">
@@ -942,20 +981,22 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                             </div>
                         </div>
                         
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                            <input 
-                                className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 pl-10 rounded-2xl text-sm font-bold outline-none" 
-                                placeholder="검색..." 
-                                value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)} 
-                            />
-                            {searchTerm && (
-                                <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                                    <X size={16} fill="currentColor" className="text-slate-300"/>
-                                </button>
-                            )}
-                        </div>
+                        {showSearchBar && (
+                            <div className="relative animate-in fade-in slide-in-from-top-2">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                <input 
+                                    className="w-full bg-slate-100 dark:bg-slate-800 dark:text-white p-3 pl-10 rounded-2xl text-sm font-bold outline-none" 
+                                    placeholder="검색 (이름, 지역, 노트, 진포, 냉동 등)..." 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                />
+                                {searchTerm && (
+                                    <button onClick={() => setSearchTerm("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                        <X size={16} fill="currentColor" className="text-slate-300"/>
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         
                         <div className="flex gap-2">
                             <div className="flex-1 flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
@@ -1051,8 +1092,18 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                                     bean.weight ? <CustomBeanIcon size={14} className="text-amber-700 dark:text-amber-500"/> : <Coffee size={14} className="text-slate-700 dark:text-slate-400"/>
                                                 )}
                                                 {isFree && (
-                                                    <div className="absolute -bottom-1 -right-1.5 text-orange-500 drop-shadow-sm">
-                                                        <Gift size={10} strokeWidth={2.5} />
+                                                    <div className={`absolute -bottom-1 -right-1.5 drop-shadow-sm ${bean.isFinished ? 'text-slate-300 dark:text-slate-600' : 'text-orange-500'}`}>
+                                                        <HeartHandshake size={8} strokeWidth={2.5} />
+                                                    </div>
+                                                )}
+                                                {!bean.isFinished && bean.storageState === 'VACUUM' && (
+                                                    <div className="absolute -top-1.5 -right-2 text-slate-500 dark:text-slate-400 drop-shadow-sm">
+                                                        <Package2 size={8} strokeWidth={2.5} />
+                                                    </div>
+                                                )}
+                                                {!bean.isFinished && bean.storageState === 'FROZEN' && (
+                                                    <div className="absolute -top-1.5 -right-2 text-blue-500 dark:text-blue-400 drop-shadow-sm">
+                                                        <Snowflake size={8} strokeWidth={2.5} />
                                                     </div>
                                                 )}
                                             </div>
@@ -1116,6 +1167,8 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                             <div className="flex items-center gap-2 mb-4">
                                 <h1 className="text-3xl font-black leading-tight break-words dark:text-white">{activeBean.name}</h1>
                                 {activeBean.isFinished && <span className="bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold px-2 py-0.5 rounded h-fit whitespace-nowrap">SOLD OUT</span>}
+                                {!activeBean.isFinished && activeBean.storageState === 'VACUUM' && <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-bold px-2 py-0.5 rounded h-fit whitespace-nowrap flex items-center gap-1 border border-slate-200 dark:border-slate-700"><Package2 size={8}/> 진포</span>}
+                                {!activeBean.isFinished && activeBean.storageState === 'FROZEN' && <span className="bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded h-fit whitespace-nowrap flex items-center gap-1 border border-blue-100 dark:border-blue-900/30"><Snowflake size={8}/> 냉동</span>}
                             </div>
                             <div className="flex gap-4 items-start">
                                 <div className="w-1/2 aspect-square bg-slate-100 dark:bg-slate-800 relative rounded-2xl overflow-hidden shadow-sm shrink-0">
@@ -1132,10 +1185,12 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                         <div className="w-full space-y-1">
                                             <span className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">Blend Info</span>
                                             {activeBean.blendInfo.map((info, i) => (
-                                                <div key={i} className="flex items-center gap-1.5 text-[11px] bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded border border-slate-100 dark:border-slate-700">
-                                                    {info.country && <span className="font-bold dark:text-slate-200">{getFlagEmoji(info.country)} {info.country}</span>}
-                                                    {info.variety && <span className="text-slate-500 dark:text-slate-400">{info.variety}</span>}
-                                                    {info.ratio && <span className="font-mono text-amber-600 dark:text-amber-500 font-bold ml-auto">{info.ratio}%</span>}
+                                                <div key={i} className="flex flex-col text-[11px] bg-slate-50 dark:bg-slate-800 px-2 py-1.5 rounded border border-slate-100 dark:border-slate-700">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        {info.country && <span className="font-bold dark:text-slate-200">{getFlagEmoji(info.country)} {info.country}</span>}
+                                                        {info.ratio && <span className="font-mono text-amber-600 dark:text-amber-500 font-bold ml-auto">{info.ratio}%</span>}
+                                                    </div>
+                                                    {info.variety && <span className="text-slate-500 dark:text-slate-400 mt-0.5 leading-tight break-words">{info.variety}</span>}
                                                 </div>
                                             ))}
                                         </div>
@@ -1188,7 +1243,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                 {isActiveBeanFree ? (
                                     <div className="flex justify-between items-center text-sm font-medium dark:text-slate-300">
                                         <span>가격 ({activeBean.weight}g)</span> 
-                                        <span className="font-bold text-orange-500 flex items-center gap-1"><Gift size={14}/> 나눔/샘플</span>
+                                        <span className="font-bold text-orange-500 flex items-center gap-1"><HeartHandshake size={12}/> 나눔/샘플</span>
                                     </div>
                                 ) : activeBean.weight && activeBean.price && (
                                     <div className="flex justify-between items-center text-sm font-medium dark:text-slate-300">
@@ -1203,6 +1258,27 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                     <div className="flex justify-between items-center text-sm font-medium pt-2 border-t border-dashed dark:border-slate-800 dark:text-slate-300">
                                         <span>한 잔 가격</span> 
                                         <span className="font-bold text-amber-700 dark:text-amber-500">{Number(activeBean.pricePerCup).toLocaleString()}원</span>
+                                    </div>
+                                )}
+                                {!activeBean.isFinished && (
+                                    <div className="pt-3 mt-1 border-t border-dashed dark:border-slate-800 flex gap-2">
+                                        {['NORMAL', 'VACUUM', 'FROZEN'].map(state => {
+                                            const isActive = (!activeBean.storageState && state === 'NORMAL') || activeBean.storageState === state;
+                                            return (
+                                                <button 
+                                                    key={state}
+                                                    onClick={() => {
+                                                        const updatedBeans = beans.map(b => b.id === activeBean.id ? { ...b, storageState: state } : b);
+                                                        idb.set(`${STORAGE_KEY}_data`, updatedBeans).then(() => setBeans(updatedBeans));
+                                                    }}
+                                                    className={`flex-1 py-2 text-[11px] font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 ${isActive ? 'bg-slate-800 dark:bg-slate-200 text-white dark:text-slate-900 shadow-md' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
+                                                >
+                                                    {state === 'NORMAL' && '일반 상태'}
+                                                    {state === 'VACUUM' && <><Package2 size={12}/> 진공 포장</>}
+                                                    {state === 'FROZEN' && <><Snowflake size={12}/> 냉동 보관</>}
+                                                </button>
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -1477,7 +1553,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                 <p className="text-[10px] font-bold text-slate-400 uppercase">{tastingForm.isManualTotal ? "Manual Score" : "Total Score"}</p>
                             </div>
                             <div className="flex-1 flex justify-center cursor-pointer relative active:scale-95 transition-transform" onClick={() => setShowScorePopup(true)}>
-                                <RadarChart scores={tastingForm.scores} />
+                                <RadarChart scores={tastingForm.scores} maxScore={tastingForm.isIntensity ? 5 : 10} />
                             </div>
                         </div>
                         
