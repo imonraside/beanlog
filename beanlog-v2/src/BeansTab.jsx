@@ -7,6 +7,7 @@ import {
     Package2, Snowflake
 } from 'lucide-react';
 import { CustomBeanIcon } from './Icons';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ImageCropper } from './ImageCropper';
 import { FlavorPicker } from './FlavorPicker';
 import { ShareModal } from './ShareModal';
@@ -355,34 +356,47 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
         
         try {
             const base64Data = tempOcrImage.split(',')[1]; 
-            const promptText = `Analyze the coffee bean image and return a valid JSON object. Rules: 1. Extract 'altitude' (look for 'm', 'masl'). 2. Separate 'notes' (short) and 'flavorDesc'. 3. Translate 'notes', 'flavorDesc', 'memo' to KOREAN. 4. Dates YYYY-MM-DD. 5. Return ONLY JSON. Keys: { "name": "", "country": "", "region": "", "altitude": "", "variety": "", "processing": "", "roastingLevel": "", "producer": "", "shop": "", "roastingDate": "", "purchaseUrl": "", "price": "", "weight": "", "notes": "", "flavorDesc": "", "memo": "" }`;
+            const promptText = `Analyze the coffee bean image and return a valid JSON object. Rules: 1. Extract 'altitude' (look for 'm', 'masl'). 2. Separate 'notes' (short) and 'flavorDesc'. 3. Translate 'notes', 'flavorDesc', 'memo' to KOREAN. 4. Dates YYYY-MM-DD. 5. If it's a blend coffee, set "isBlend": true and extract components into "blendInfo" [{"country": "", "variety": "", "ratio": ""}]. If single origin, "isBlend": false. 6. Return ONLY JSON. Keys: { "name": "", "country": "", "region": "", "altitude": "", "variety": "", "processing": "", "roastingLevel": "", "producer": "", "shop": "", "roastingDate": "", "purchaseUrl": "", "price": "", "weight": "", "notes": "", "flavorDesc": "", "memo": "", "isBlend": false, "blendInfo": [] }`;
             
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${globalApiKey}`, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ 
-                    contents: [{ 
-                        parts: [ 
-                            { text: promptText }, 
-                            { inlineData: { mimeType: "image/jpeg", data: base64Data } } 
-                        ] 
-                    }], 
-                    generationConfig: { responseMimeType: "application/json" } 
-                }) 
+            const genAI = new GoogleGenerativeAI(globalApiKey);
+            const model = genAI.getGenerativeModel({ 
+                model: "gemini-2.5-flash",
+                generationConfig: { responseMimeType: "application/json" }
             });
             
-            const res = await response.json(); 
-            const text = res.candidates?.[0]?.content?.parts?.[0]?.text;
+            const imagePart = {
+                inlineData: { data: base64Data, mimeType: "image/jpeg" },
+            };
+            
+            const result = await model.generateContent([promptText, imagePart]);
+            const text = result.response.text();
             
             if (text) { 
                 const clean = text.replace(/```json|```/g, "").trim(); 
                 setBeanForm(p => ({ ...p, ...JSON.parse(clean) })); 
                 showToastMsg("정보 입력 완료!"); 
             } else {
-                throw new Error();
+                throw new Error("No text returned from Gemini");
             }
         } catch (e) { 
-            showToastMsg("분석 실패"); 
+            let errMsg = '알 수 없는 오류가 발생했습니다.';
+            if (e instanceof Error) {
+                const msg = e.message.toLowerCase();
+                if (msg.includes('api key') || msg.includes('permission')) {
+                    errMsg = 'API 키가 유효하지 않거나 권한이 없습니다.';
+                } else if (msg.includes('429') || msg.includes('quota')) {
+                    errMsg = '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+                } else if (msg.includes('safety')) {
+                    errMsg = '안전 정책에 의해 분석이 차단되었습니다.';
+                } else if (msg.includes('payload size') || msg.includes('invalid argument')) {
+                    errMsg = '이미지 용량이 너무 크거나 잘못된 요청입니다.';
+                } else if (msg.includes('fetch') || msg.includes('503') || msg.includes('500')) {
+                    errMsg = '네트워크 오류 또는 서버가 응답하지 않습니다.';
+                } else {
+                    errMsg = e.message; // 그 외의 경우는 원본 에러 출력
+                }
+            }
+            showToastMsg(`분석 실패: ${errMsg}`); 
             console.error(e); 
         } finally { 
             setIsProcessing(false); 
@@ -1283,6 +1297,31 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                 )}
                             </div>
                             
+                            {activeBean.weight && (
+                                <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-5 rounded-3xl shadow-sm space-y-3">
+                                    <div className="flex justify-between items-center text-xs font-bold mb-1">
+                                        <span className="text-slate-500 dark:text-slate-400">남은 원두</span>
+                                        <span className="text-amber-600 dark:text-amber-500">
+                                            {activeBean.remainingWeight !== undefined ? activeBean.remainingWeight : activeBean.weight}g <span className="text-slate-300 dark:text-slate-600">/ {activeBean.weight}g</span>
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={activeBean.weight}
+                                        value={activeBean.remainingWeight !== undefined ? activeBean.remainingWeight : activeBean.weight}
+                                        onChange={async (e) => {
+                                            const remaining = parseInt(e.target.value, 10);
+                                            const isFinished = remaining === 0;
+                                            const updatedBeans = beans.map(b => String(b.id) === String(activeBean.id) ? { ...b, remainingWeight: remaining, isFinished: isFinished } : b);
+                                            setBeans(updatedBeans);
+                                            await idb.set(`${STORAGE_KEY}_data`, updatedBeans);
+                                        }}
+                                        className="w-full accent-amber-600 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer"
+                                    />
+                                </div>
+                            )}
+
                             {activeBean.memo && (
                                 <div className="bg-slate-50 dark:bg-slate-800 p-5 rounded-2xl border dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm whitespace-pre-wrap">
                                     {activeBean.memo}
@@ -1295,7 +1334,17 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                     <div className="flex gap-2">
                                         <button 
                                             onClick={async () => { 
-                                                const updatedBeans = beans.map(b => String(b.id) === String(activeBean.id) ? { ...b, isFinished: !b.isFinished } : b); 
+                                                const updatedBeans = beans.map(b => {
+                                                    if (String(b.id) === String(activeBean.id)) {
+                                                        const newIsFinished = !b.isFinished;
+                                                        return {
+                                                            ...b,
+                                                            isFinished: newIsFinished,
+                                                            remainingWeight: newIsFinished ? 0 : (b.remainingWeight === 0 ? b.weight : b.remainingWeight)
+                                                        };
+                                                    }
+                                                    return b;
+                                                }); 
                                                 if(await idb.set(`${STORAGE_KEY}_data`, updatedBeans)) { setBeans(updatedBeans); } 
                                             }} 
                                             className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors ${activeBean.isFinished ? 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-transparent' : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}
