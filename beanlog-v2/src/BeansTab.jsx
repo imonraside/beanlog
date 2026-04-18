@@ -519,8 +519,10 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                 } 
                 return b; 
             }); 
-            saveData(newBeans, selectedId, false); 
-            setTastingMenuIdx(null); 
+            idb.set(`${STORAGE_KEY}_data`, newBeans).then(() => {
+                setBeans(newBeans);
+                setTastingMenuIdx(null);
+            });
         } 
     };
     
@@ -1380,7 +1382,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                                 onContextMenu={(e) => { e.preventDefault(); setTastingMenuIdx(idx); }} 
                                                 onClick={() => { if (isLongPress.current) return; if (tastingMenuIdx !== null) { setTastingMenuIdx(null); return; } setTastingForm(t); setEditTastingIdx(idx); updateView(VIEW.EDIT_TASTING, activeBean.id); }}
                                             >
-                                                <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center font-black border dark:border-slate-700 text-sm dark:text-white">
+                                                <div className="w-12 h-12 bg-white dark:bg-slate-900 rounded-xl flex items-center justify-center font-black border dark:border-slate-700 text-sm dark:text-white shrink-0">
                                                     {getDisplayScore(t)}
                                                 </div>
                                                 <div className="flex-1 min-w-0">

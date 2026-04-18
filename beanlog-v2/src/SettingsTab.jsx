@@ -75,6 +75,17 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
             const url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
             // keepalive: true 옵션으로 앱이 닫히는 순간에도 요청이 완수되도록 브라우저에 위임합니다.
             const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${window.gapi.client.getToken().access_token}` }, body: form, keepalive: isSilent });
+            
+            // 💡 401 에러(토큰 만료)가 발생한 경우
+            if (res.status === 401) {
+                console.log("Token expired. Requesting new token...");
+                window.gapi.client.setToken(''); // 기존 만료된 토큰 비우기
+                if (!isSilent) setIsSyncing(false); // 로딩 상태 초기화
+                // withDriveAuth를 다시 호출하여 새 토큰을 팝업으로 발급받고 현재 작업을 재시도
+                withDriveAuth(() => performDriveBackup(isSilent));
+                return; // 이번 실행은 여기서 종료
+            }
+
             if (!res.ok) throw new Error("Upload failed");
             
             // 최신 5개 파일만 남기고 이전 백업본 삭제
@@ -123,11 +134,13 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
 
     useEffect(() => {
         const handleVisibilityChange = () => { 
-            if (document.visibilityState === 'hidden' && autoBackup && isDriveReady && window.gapi?.client?.getToken()) {
+            // 💡 앱이 화면에 다시 나타날 때 (포그라운드) 하루 1회 백업 시도
+            if (document.visibilityState === 'visible' && autoBackup && isDriveReady) {
                 if (localStorage.getItem(`${STORAGE_KEY}_last_auto_backup_date`) !== new Date().toDateString()) {
-                    performDriveBackup(true);
+                    // withDriveAuth를 거치므로 토큰이 아예 없거나, 만료되어 401을 받으면 팝업 갱신을 유도함
+                    withDriveAuth(() => performDriveBackup(true));
                 }
-            } 
+            }
         };
         document.addEventListener('visibilitychange', handleVisibilityChange);
         return () => document.removeEventListener('visibilitychange', handleVisibilityChange);

@@ -641,9 +641,9 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
                             <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Coffee Calendar</h2>
                         </div>
                         <div className="flex gap-2 text-[10px] font-bold text-slate-400">
-                            <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-100 dark:border-amber-900/30 flex items-center gap-1"><Coffee size={10}/> {stats.monthTastingCount}잔 마심</span>
-                            <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 flex items-center gap-1"><CustomBeanIcon size={10} className="text-amber-700 dark:text-amber-500"/> {stats.monthBeansBought}개 구매</span>
-                            {stats.monthGearsBought > 0 && <span className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-900/30 flex items-center gap-1"><Box size={10}/> {stats.monthGearsBought}개 기물</span>}
+                        <span className="bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded border border-amber-100 dark:border-amber-900/30 flex items-center gap-1"><Coffee size={10}/> {stats.monthTastingCount}잔</span>
+                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700 flex items-center gap-1"><CustomBeanIcon size={10} className="text-amber-700 dark:text-amber-500"/> {stats.monthBeansBought}개</span>
+                        {stats.monthGearsBought > 0 && <span className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 px-1.5 py-0.5 rounded border border-green-100 dark:border-green-900/30 flex items-center gap-1"><Box size={10}/> {stats.monthGearsBought}개</span>}
                         </div>
                     </div>
                     <CalendarView tastingDays={stats.tastingDays} purchaseDays={stats.purchaseDays} gearDays={stats.gearDays} onSelectDate={setSelectedDate} selectedDate={selectedDate} onMonthChange={setViewDate} viewDate={viewDate} />
