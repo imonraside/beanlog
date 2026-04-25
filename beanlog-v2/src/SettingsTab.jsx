@@ -6,13 +6,8 @@ import { idb } from './utils';
 export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, onToggleTheme, onLoadDemoData }) => {
     const [isDriveReady, setIsDriveReady] = useState(false);
     const [isSyncing, setIsSyncing] = useState(false);
-    const [autoBackup, setAutoBackup] = useState(false);
     const [backupFiles, setBackupFiles] = useState([]);
     const [showRestoreModal, setShowRestoreModal] = useState(false);
-
-    useEffect(() => {
-        idb.get(`${STORAGE_KEY}_auto_backup`).then(val => setAutoBackup(!!val));
-    }, []);
 
     useEffect(() => {
         const loadGapi = () => new Promise((resolve) => {
@@ -109,17 +104,8 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
         withDriveAuth(() => performDriveBackup(false));
     };
 
-    const toggleAutoBackup = () => {
-        const nextVal = !autoBackup;
-        if (nextVal) {
-            withDriveAuth(async () => { setAutoBackup(true); await idb.set(`${STORAGE_KEY}_auto_backup`, true); showToastMsg("자동 백업이 활성화되었습니다."); });
-        } else {
-            setAutoBackup(false); idb.set(`${STORAGE_KEY}_auto_backup`, false); showToastMsg("자동 백업이 비활성화되었습니다.");
-        }
-    };
-
     const handleDriveDisconnect = () => {
-        if (!confirm("구글 드라이브 연동을 해제하시겠습니까?\n자동 백업도 함께 꺼집니다.")) return;
+        if (!confirm("구글 드라이브 연동을 해제하시겠습니까?")) return;
         
         const token = window.gapi?.client?.getToken();
         if (token) {
@@ -127,24 +113,8 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
                 window.gapi.client.setToken('');
             });
         }
-        setAutoBackup(false);
-        idb.set(`${STORAGE_KEY}_auto_backup`, false);
         showToastMsg("구글 드라이브 연동이 해제되었습니다.");
     };
-
-    useEffect(() => {
-        const handleVisibilityChange = () => { 
-            // 💡 앱이 화면에 다시 나타날 때 (포그라운드) 하루 1회 백업 시도
-            if (document.visibilityState === 'visible' && autoBackup && isDriveReady) {
-                if (localStorage.getItem(`${STORAGE_KEY}_last_auto_backup_date`) !== new Date().toDateString()) {
-                    // withDriveAuth를 거치므로 토큰이 아예 없거나, 만료되어 401을 받으면 팝업 갱신을 유도함
-                    withDriveAuth(() => performDriveBackup(true));
-                }
-            }
-        };
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [autoBackup, isDriveReady]);
 
     const handleDriveRestoreClick = () => {
         withDriveAuth(async () => {
@@ -213,24 +183,21 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
                 <div className="pt-8 border-t dark:border-slate-800 space-y-3">
                     <h3 className="font-bold text-sm">데이터 관리</h3>
                     <button onClick={onLoadDemoData} className="w-full py-4 bg-slate-100 dark:bg-slate-800 font-bold rounded-2xl flex items-center justify-center gap-2"><Sparkles size={18}/> 데모 데이터 적용</button>
-                    <div className="grid grid-cols-2 gap-x-2 gap-y-3">
-                        <button onClick={handleDriveBackup} disabled={isSyncing} className="py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+                    <div className="grid grid-cols-3 gap-2">
+                        <button onClick={handleDriveBackup} disabled={isSyncing} className="py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex flex-col items-center justify-center gap-1 disabled:opacity-50">
                             {isSyncing ? <RefreshCw className="animate-spin" size={18}/> : <Cloud size={18}/>} 
-                            <span className="text-xs">드라이브 백업</span>
+                            <span className="text-[11px]">드라이브 백업</span>
                         </button>
-                        <button onClick={handleDriveRestoreClick} disabled={isSyncing} className="py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+                        <button onClick={handleDriveRestoreClick} disabled={isSyncing} className="py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex flex-col items-center justify-center gap-1 disabled:opacity-50">
                             {isSyncing ? <RefreshCw className="animate-spin" size={18}/> : <Cloud size={18}/>} 
-                            <span className="text-xs">드라이브 복원</span>
+                            <span className="text-[11px]">드라이브 복원</span>
                         </button>
-                        <label className="relative py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer">
-                            <RefreshCw size={18}/>
-                            <span className="text-xs">자동 백업</span>
-                            <input type="checkbox" checked={autoBackup} onChange={toggleAutoBackup} className="absolute right-4 w-5 h-5 accent-blue-600 cursor-pointer" />
-                        </label>
-                        <button onClick={handleDriveDisconnect} className="py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex items-center justify-center gap-2">
+                        <button onClick={handleDriveDisconnect} className="py-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 font-bold rounded-xl flex flex-col items-center justify-center gap-1">
                             <Unplug size={18}/>
-                            <span className="text-xs">연동 해제</span>
+                            <span className="text-[11px]">연결 해제</span>
                         </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-3">
                         <button onClick={backup} className="py-3 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl flex items-center justify-center gap-2"><Download size={18}/> <span className="text-xs">기기 백업</span></button>
                         <div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept=".json" /><label htmlFor="rFile" className="w-full h-full py-3 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> <span className="text-xs">기기 복원</span></label></div>
                     </div>

@@ -11,7 +11,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ImageCropper } from './ImageCropper';
 import { FlavorPicker } from './FlavorPicker';
 import { ShareModal } from './ShareModal';
-import { BeanShareModal } from './BeanShareModal';
 import { ScoreButton, ScoreButtonPlus } from './Buttons';
 import { RadarChart } from './Charts';
 import { STORAGE_KEY, INITIAL_BEAN, INITIAL_TASTING, TAB, TASTE_ITEMS } from './constants';
@@ -61,7 +60,6 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
     const [showImportInput, setShowImportInput] = useState(false);
     const [importUrl, setImportUrl] = useState("");
     const [showAddMenu, setShowAddMenu] = useState(false);
-    const [shareBeanData, setShareBeanData] = useState(null);
     const [beanMenuIdx, setBeanMenuIdx] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -223,7 +221,6 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
             if(showShopList) { setShowShopList(false); return; } 
             if(showAddMenu) { setShowAddMenu(false); return; } 
             if(showImportInput) { setShowImportInput(false); return; } 
-            if(shareBeanData) { setShareBeanData(null); return; } 
             if(beanMenuIdx !== null) { setBeanMenuIdx(null); return; } 
             if(shareData) { setShareData(null); return; } 
             if(cropImage) { setCropImage(null); return; } 
@@ -245,8 +242,8 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
         window.addEventListener('popstate', handlePop); 
         return () => window.removeEventListener('popstate', handlePop);
     }, [
-        active, shareData, cropImage, showFlavorPicker, showRandomPopup, tastingMenuIdx, 
-        shareBeanData, beanMenuIdx, showImportInput, showAddMenu, showShopList, 
+        active, shareData, cropImage, showFlavorPicker, showRandomPopup, tastingMenuIdx,
+        beanMenuIdx, showImportInput, showAddMenu, showShopList, 
         showAddShopModal, showScorePopup
     ]);
 
@@ -862,8 +859,6 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                 </div>
             )}
             
-            {shareBeanData && <BeanShareModal bean={shareBeanData} onClose={() => setShareBeanData(null)} />}
-            
             {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
             
             {showFlavorPicker && (
@@ -1145,9 +1140,9 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                     
                                     {beanMenuIdx === bean.id && (
                                         <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => { e.stopPropagation(); setShareBeanData(bean); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
+                                            <button onClick={(e) => { e.stopPropagation(); setShareData({ bean }); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div>
-                                                <span className="text-[10px] font-bold">원두 카드</span>
+                                                <span className="text-[10px] font-bold">이미지 공유</span>
                                             </button>
                                             <button onClick={(e) => { e.stopPropagation(); handleBeanTextShare(bean); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><FileText size={20}/></div>

@@ -34,7 +34,10 @@ export const formatTime = (sec) => `${Math.floor(sec/60)}:${(sec%60)<10?'0':''}$
 export const generateShareText = (bean, tasting) => {
     const score = getDisplayScore(tasting);
     const scoresText = Object.entries(tasting.scores).map(([key, val]) => `- ${SCORE_LABELS_KO[key]}: ${val}`).join('\n');
-    return `[BeanLog 시음 기록]\n원두: ${bean.name}\n국가: ${bean.country || '-'} / 지역: ${bean.region || '-'}\n가공: ${bean.processing || '-'} / 로스팅: ${bean.roastingLevel || '-'} (${bean.roastingDate || '-'})\n구매처: ${bean.shop || '-'}\n\n날짜: ${tasting.date}\n평점: ${score}\n[세부 점수]\n${scoresText}\n\n노트: ${tasting.notes || '-'}\n평가: ${tasting.desc || '-'}\n메모: ${tasting.memo || '-'}`;
+    const blendText = (bean.isBlend && bean.blendInfo) 
+        ? `블렌드 정보: ${bean.blendInfo.map(b => `${b.country} ${b.variety} ${b.ratio}%`.trim()).join(', ')}` 
+        : `국가: ${bean.country || '-'} / 지역: ${bean.region || '-'}`;
+    return `[BeanLog 시음 기록]\n원두: ${bean.name}\n${blendText}\n가공: ${bean.processing || '-'} / 로스팅: ${bean.roastingLevel || '-'} (${bean.roastingDate || '-'})\n구매처: ${bean.shop || '-'}\n\n날짜: ${tasting.date}\n평점: ${score}\n[세부 점수]\n${scoresText}\n\n노트: ${tasting.notes || '-'}\n평가: ${tasting.desc || '-'}\n메모: ${tasting.memo || '-'}`;
 };
 
 export const generateBeanShareText = (bean) => {

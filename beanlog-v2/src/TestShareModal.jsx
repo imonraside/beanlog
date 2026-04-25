@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { X, Download, Share2, Image as ImageIcon } from 'lucide-react';
+import { X, Download, Share2, Sparkles } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { CustomBeanIcon } from './Icons';
 import { SCORE_LABELS_KO } from './constants';
 import { parseTags, getFlagEmoji } from './utils';
 
-export const ShareModal = ({ bean, tasting, onClose }) => {
+export const TestShareModal = ({ bean, tasting, onClose }) => {
     const cardRef = useRef(null);
     const [isGenerating, setIsGenerating] = useState(false);
 
@@ -60,14 +60,15 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
 
     const notes = parseTags(tasting ? tasting.notes : bean.notes);
     
-    // 상세 내용 추출 (시음 모드 vs 원두 모드 분기)
+    // 💡 추가됨: 상세 내용 추출 (시음 모드 vs 원두 모드 분기)
     const descText = tasting ? tasting.desc : bean.flavorDesc;
     const memoText = tasting ? tasting.memo : bean.memo;
     
-    // 감성적인 그라데이션 배경 테마
+    // 감성적인 그라데이션 배경 테마로 원복
     const bgGradient = "bg-gradient-to-br from-[#FFF8F0] via-[#FCEBDB] to-[#F1DECD]";
     const textColor = "text-[#4A2E1B]";
 
+    // 💡 추가됨: 상세 스펙 모아보기
     const specs = [
         { label: "Region", value: bean.region },
         { label: "Variety", value: bean.variety },
@@ -83,21 +84,23 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
         <div className="fixed inset-0 z-[120] bg-black/80 overflow-y-auto animate-in fade-in" onClick={onClose}>
             <div className="min-h-full flex flex-col items-center justify-center p-4 py-10">
                 <div className="w-full max-w-[300px] flex justify-between items-center mb-4 text-white shrink-0" onClick={e => e.stopPropagation()}>
-                    <h3 className="font-bold flex items-center gap-2"><ImageIcon size={16}/> 이미지 공유</h3>
+                    <h3 className="font-bold flex items-center gap-2"><Sparkles size={16}/> 가변 비율 공유 카드</h3>
                     <button onClick={onClose} className="p-1 bg-white/20 rounded-full hover:bg-white/30"><X size={18}/></button>
                 </div>
 
-                {/* 캡처용 컨테이너 */}
+                {/* 화면에 보여줄 캡처용 컨테이너 (최소 9:16 유지, 내용 길면 세로로 늘어남) */}
                 <div className="relative w-[280px] rounded-3xl overflow-hidden shadow-2xl shrink-0" onClick={e => e.stopPropagation()}>
                     <div ref={cardRef} className={`w-full min-h-[497px] h-fit ${bgGradient} flex flex-col`}>
                         
                         <div className={`relative z-10 flex flex-col pb-5 flex-1`}>
                             <div className="flex-1 flex flex-col justify-center">
                                 
+                                {/* 💡 수정됨: 원두 정보가 있는 구간에만 사진 배경 적용 */}
                                 <div className="relative px-5 pt-6 pb-4 mb-3 overflow-hidden">
                                     {bean.mainImage && (
                                         <>
                                             <div className="absolute inset-0 bg-cover bg-center opacity-50 blur-none scale-110" style={{ backgroundImage: `url("${bean.mainImage}")` }}></div>
+                                            {/* 아래쪽은 시음 영역 배경색과 자연스럽게 섞이도록 그라데이션 처리 */}
                                             <div className="absolute inset-0 bg-gradient-to-b from-[#FFF8F0]/30 via-[#FCEBDB]/60 to-[#FCEBDB]"></div>
                                         </>
                                     )}
@@ -114,69 +117,70 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                                         </div>
                                         
                                         <div className={`grid grid-cols-2 gap-x-3 gap-y-2 border-y border-black/10 py-3`}>
-                                            {bean.isBlend && bean.blendInfo && bean.blendInfo.length > 0 && (
-                                                <div className="col-span-2 space-y-1 mb-1">
-                                                    <span className={`text-[8px] font-bold uppercase tracking-wider opacity-60 ${textColor}`}>Blend Info</span>
-                                                    {bean.blendInfo.map((info, idx) => (
-                                                        <div key={idx} className={`text-[10px] font-bold ${textColor} flex justify-between`}>
-                                                            <span>{getFlagEmoji(info.country)} {info.country} {info.variety}</span>
-                                                            <span>{info.ratio}%</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {specs.map((s, idx) => (
-                                                <div key={idx} className="flex flex-col min-w-0">
-                                                    <span className={`text-[8px] font-bold uppercase tracking-wider opacity-60 ${textColor}`}>{s.label}</span>
-                                                    <span className={`text-[10px] font-bold ${textColor} truncate`}>{s.value}</span>
+                                    {bean.isBlend && bean.blendInfo && bean.blendInfo.length > 0 && (
+                                        <div className="col-span-2 space-y-1 mb-1">
+                                            <span className={`text-[8px] font-bold uppercase tracking-wider opacity-60 ${textColor}`}>Blend Info</span>
+                                            {bean.blendInfo.map((info, idx) => (
+                                                <div key={idx} className={`text-[10px] font-bold ${textColor} flex justify-between`}>
+                                                    <span>{getFlagEmoji(info.country)} {info.country} {info.variety}</span>
+                                                    <span>{info.ratio}%</span>
                                                 </div>
                                             ))}
                                         </div>
+                                    )}
+                                    {specs.map((s, idx) => (
+                                        <div key={idx} className="flex flex-col min-w-0">
+                                            <span className={`text-[8px] font-bold uppercase tracking-wider opacity-60 ${textColor}`}>{s.label}</span>
+                                            <span className={`text-[10px] font-bold ${textColor} truncate`}>{s.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
                                     </div>
                                 </div>
 
+                                {/* 💡 추가됨: 나머지 시음 기록 및 메모 영역 (배경 없음) */}
                                 <div className="px-5 flex flex-col flex-1 justify-start">
-                                    {notes.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mb-3">
-                                            {notes.map((note, idx) => (<span key={idx} className={`bg-white/70 text-[#4A2E1B] px-2 py-1 rounded-md text-[9px] font-bold shadow-sm`}>{note}</span>))}
-                                        </div>
-                                    )}
-
-                                    {tasting && (
-                                        <div className={`bg-white/40 backdrop-blur-sm border border-white/40 rounded-lg py-1.5 px-2 shadow-sm mb-3 flex justify-between items-center w-full`}>
-                                            {Object.entries(tasting.scores).map(([key, val]) => (
-                                                <span key={key} className={`text-[9px] font-bold ${textColor} flex items-center gap-0.5`}>
-                                                    <span className="opacity-60">{SCORE_LABELS_KO[key] || key}</span>
-                                                    <span className="font-black">{val}</span>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    <div className="flex flex-col gap-1.5 flex-1 justify-start">
-                                        {descText && (
-                                            <div className={`bg-white/40 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
-                                                <p className={`text-[11px] font-medium leading-relaxed ${textColor}`}>"{descText}"</p>
-                                            </div>
-                                        )}
-                                        {memoText && (
-                                            <div className={`bg-black/5 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
-                                                <p className={`text-[10px] font-medium leading-snug opacity-70 ${textColor}`}>{memoText}</p>
-                                            </div>
-                                        )}
+                                {notes.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mb-3">
+                                        {notes.map((note, idx) => (<span key={idx} className={`bg-white/70 text-[#4A2E1B] px-2 py-1 rounded-md text-[9px] font-bold shadow-sm`}>{note}</span>))}
                                     </div>
-                                    
-                                    {tasting && tasting.date && (
-                                        <div className={`mt-4 text-right text-[9px] font-bold opacity-60 ${textColor}`}>
-                                            Tasted on {tasting.date}
+                                )}
+
+                                {/* 💡 수정됨: flex-wrap 제거 후 넓이를 꽉 채워 한 줄로 강제 정렬 */}
+                                {tasting && (
+                                    <div className={`bg-white/40 backdrop-blur-sm border border-white/40 rounded-lg py-1.5 px-2 shadow-sm mb-3 flex justify-between items-center w-full`}>
+                                        {Object.entries(tasting.scores).map(([key, val]) => (
+                                            <span key={key} className={`text-[9px] font-bold ${textColor} flex items-center gap-0.5`}>
+                                                <span className="opacity-60">{SCORE_LABELS_KO[key] || key}</span>
+                                                <span className="font-black">{val}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-1.5 flex-1 justify-start">
+                                    {descText && (
+                                        <div className={`bg-white/40 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
+                                            <p className={`text-[11px] font-medium leading-relaxed ${textColor}`}>"{descText}"</p>
                                         </div>
                                     )}
+                                    {memoText && (
+                                        <div className={`bg-black/5 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
+                                            <p className={`text-[10px] font-medium leading-snug opacity-70 ${textColor}`}>{memoText}</p>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                {tasting && tasting.date && (
+                                    <div className={`mt-4 text-right text-[9px] font-bold opacity-60 ${textColor}`}>
+                                        Tasted on {tasting.date}
+                                    </div>
+                                )}
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                
                 <div className="w-full max-w-[280px] flex gap-3 mt-6 shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={handleDownload} disabled={isGenerating} className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors"><Download size={18}/> 다운로드</button>
                     <button onClick={handleShare} disabled={isGenerating} className="flex-1 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors"><Share2 size={18}/> 공유하기</button>
