@@ -156,12 +156,12 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                                     <div className="flex flex-col gap-1.5 flex-1 justify-start">
                                         {descText && (
                                             <div className={`bg-white/40 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
-                                                <p className={`text-[11px] font-medium leading-relaxed ${textColor}`}>"{descText}"</p>
+                                                <p className={`text-[11px] font-medium leading-relaxed whitespace-pre-wrap ${textColor}`}>"{descText}"</p>
                                             </div>
                                         )}
                                         {memoText && (
                                             <div className={`bg-black/5 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
-                                                <p className={`text-[10px] font-medium leading-snug opacity-70 ${textColor}`}>{memoText}</p>
+                                                <p className={`text-[10px] font-medium leading-snug opacity-70 whitespace-pre-wrap ${textColor}`}>{memoText}</p>
                                             </div>
                                         )}
                                     </div>
