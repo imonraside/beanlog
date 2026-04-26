@@ -185,13 +185,14 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
         if (!active) return;
         const handlePop = (event) => { 
             const modal = event.state ? event.state.modal : null; 
+            if (shareData) { setShareData(null); return; }
             if (modal !== 'STAT_DETAIL' && statDetail) setStatDetail(null); 
             if (modal !== 'EXPENDITURE' && showExpenditurePopup) setShowExpenditurePopup(false); 
             if (modal !== 'BEAN_SELECT' && showBeanSelectPopup) setShowBeanSelectPopup(false); 
             if (modal !== 'GEAR_ADD' && showGearAddPopup) setShowGearAddPopup(false); 
         };
         window.addEventListener('popstate', handlePop); return () => window.removeEventListener('popstate', handlePop);
-    }, [active, statDetail, showExpenditurePopup, showBeanSelectPopup, showGearAddPopup]);
+    }, [active, statDetail, showExpenditurePopup, showBeanSelectPopup, showGearAddPopup, shareData]);
 
     useEffect(() => { 
         if (!active) { 
@@ -484,7 +485,7 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
     return (
         <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 ${active ? 'block' : 'hidden'}`}>
             {toast && <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-xl z-[120] whitespace-nowrap animate-in fade-in slide-in-from-top-2">{toast}</div>}
-            {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
+            {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => window.history.back()} />}
             {statDetail && (
                 <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
                     <div className="bg-white dark:bg-slate-900 w-full max-w-sm h-[60vh] rounded-2xl shadow-xl animate-pop flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -676,7 +677,7 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
                                                 <div className="p-2 bg-slate-800 rounded-full"><CustomBeanIcon size={20}/></div>
                                                 <span className="text-[10px] font-bold">원두 정보</span>
                                             </button>
-                                            <button onClick={(e) => { e.stopPropagation(); const bean = beans.find(b => b.id === t.beanId); if(bean) setShareData({ bean, tasting: t }); setTastingMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
+                                        <button onClick={(e) => { e.stopPropagation(); const bean = beans.find(b => b.id === t.beanId); if(bean) { window.history.pushState({ tab: TAB.STATS, modal: 'SHARE' }, ''); setShareData({ bean, tasting: t }); } setTastingMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div>
                                                 <span className="text-[10px] font-bold">이미지 공유</span>
                                             </button>

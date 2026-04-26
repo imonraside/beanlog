@@ -106,35 +106,35 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
         blendInfo: prev.blendInfo.map((item, i) => i === idx ? { ...item, [field]: val } : item) 
     }));
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (active && view === VIEW.EDIT_TASTING) {
-            const timer = setTimeout(() => {
-                if (tastingDescRef.current) {
-                    tastingDescRef.current.style.height = 'auto';
-                    tastingDescRef.current.style.height = tastingDescRef.current.scrollHeight + 'px';
-                }
-                if (tastingMemoRef.current) {
-                    tastingMemoRef.current.style.height = 'auto';
-                    tastingMemoRef.current.style.height = tastingMemoRef.current.scrollHeight + 'px';
-                }
-            }, 10);
-            return () => clearTimeout(timer);
+            const scrollContainer = mainRef.current;
+            const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+            if (tastingDescRef.current) {
+                tastingDescRef.current.style.height = 'auto';
+                tastingDescRef.current.style.height = tastingDescRef.current.scrollHeight + 'px';
+            }
+            if (tastingMemoRef.current) {
+                tastingMemoRef.current.style.height = 'auto';
+                tastingMemoRef.current.style.height = tastingMemoRef.current.scrollHeight + 'px';
+            }
+            if (scrollContainer) scrollContainer.scrollTop = scrollTop;
         }
     }, [active, view, tastingForm.desc, tastingForm.memo]);
 
-    useEffect(() => {
+    useLayoutEffect(() => {
         if (active && view === VIEW.EDIT_BEAN) {
-            const timer = setTimeout(() => {
-                if (beanFlavorDescRef.current) {
-                    beanFlavorDescRef.current.style.height = 'auto';
-                    beanFlavorDescRef.current.style.height = beanFlavorDescRef.current.scrollHeight + 'px';
-                }
-                if (beanMemoRef.current) {
-                    beanMemoRef.current.style.height = 'auto';
-                    beanMemoRef.current.style.height = beanMemoRef.current.scrollHeight + 'px';
-                }
-            }, 10);
-            return () => clearTimeout(timer);
+            const scrollContainer = mainRef.current;
+            const scrollTop = scrollContainer ? scrollContainer.scrollTop : 0;
+            if (beanFlavorDescRef.current) {
+                beanFlavorDescRef.current.style.height = 'auto';
+                beanFlavorDescRef.current.style.height = beanFlavorDescRef.current.scrollHeight + 'px';
+            }
+            if (beanMemoRef.current) {
+                beanMemoRef.current.style.height = 'auto';
+                beanMemoRef.current.style.height = beanMemoRef.current.scrollHeight + 'px';
+            }
+            if (scrollContainer) scrollContainer.scrollTop = scrollTop;
         }
     }, [active, view, beanForm.flavorDesc, beanForm.memo]);
 
@@ -859,7 +859,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                 </div>
             )}
             
-            {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => setShareData(null)} />}
+            {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => window.history.back()} />}
             
             {showFlavorPicker && (
                 <FlavorPicker 
@@ -1140,7 +1140,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                     
                                     {beanMenuIdx === bean.id && (
                                         <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                                            <button onClick={(e) => { e.stopPropagation(); setShareData({ bean }); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
+                                            <button onClick={(e) => { e.stopPropagation(); window.history.pushState({ view, id: selectedId, tab: TAB.BEANS, modal: 'SHARE' }, ''); setShareData({ bean }); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div>
                                                 <span className="text-[10px] font-bold">이미지 공유</span>
                                             </button>
@@ -1389,7 +1389,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                                 
                                                 {tastingMenuIdx === idx && (
                                                     <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
-                                                        <button onClick={(e) => { e.stopPropagation(); setShareData({ bean: activeBean, tasting: t }); setTastingMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
+                                                        <button onClick={(e) => { e.stopPropagation(); window.history.pushState({ view, id: selectedId, tab: TAB.BEANS, modal: 'SHARE' }, ''); setShareData({ bean: activeBean, tasting: t }); setTastingMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
                                                             <div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div>
                                                             <span className="text-[10px] font-bold">이미지 공유</span>
                                                         </button>
@@ -1552,16 +1552,16 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                 className="w-full bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl min-h-[6rem] text-sm font-medium text-amber-900 dark:text-amber-400 outline-none resize-none overflow-hidden" 
                                 placeholder="향미에 대한 자세한 설명 (줄글)" 
                                 value={beanForm.flavorDesc} 
-                                onChange={e => { setBeanForm({...beanForm, flavorDesc: e.target.value}); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
-                                onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
+                                onChange={e => setBeanForm({...beanForm, flavorDesc: e.target.value})} 
+                                onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                             />
                             <textarea 
                                 ref={beanMemoRef} 
                                 className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-4 rounded-2xl min-h-[6rem] text-sm outline-none resize-none overflow-hidden" 
                                 placeholder="메모" 
                                 value={beanForm.memo} 
-                                onChange={e => { setBeanForm({...beanForm, memo: e.target.value}); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
-                                onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
+                                onChange={e => setBeanForm({...beanForm, memo: e.target.value})} 
+                                onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                             />
                         </div>
                         
@@ -1616,16 +1616,16 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                             className="w-full bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl min-h-[6rem] text-sm font-medium text-amber-900 dark:text-amber-400 outline-none resize-none overflow-hidden" 
                             placeholder="맛에 대한 자세한 평가" 
                             value={tastingForm.desc} 
-                            onChange={e => { setTastingForm({...tastingForm, desc: e.target.value}); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
-                            onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
+                            onChange={e => setTastingForm({...tastingForm, desc: e.target.value})} 
+                            onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                         />
                         <textarea 
                             ref={tastingMemoRef} 
                             className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-4 rounded-2xl min-h-[8rem] text-sm outline-none resize-none overflow-hidden" 
                             placeholder="레시피 / 메모" 
                             value={tastingForm.memo} 
-                            onChange={e => { setTastingForm({...tastingForm, memo: e.target.value}); e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
-                            onFocus={e => { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; }} 
+                            onChange={e => setTastingForm({...tastingForm, memo: e.target.value})} 
+                            onFocus={(e) => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
                         />
                         
                         {editTastingIdx !== null && (

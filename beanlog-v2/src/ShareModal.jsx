@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { X, Download, Share2, Image as ImageIcon } from 'lucide-react';
+import { X, Download, Share2, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { CustomBeanIcon } from './Icons';
 import { SCORE_LABELS_KO } from './constants';
@@ -10,27 +10,42 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
     const [isGenerating, setIsGenerating] = useState(true);
     const [generatedImg, setGeneratedImg] = useState(null);
     const [shareFile, setShareFile] = useState(null);
+    const [progress, setProgress] = useState(0);
 
     // 모달이 켜지면 백그라운드에서 이미지를 미리 렌더링하여 준비해 둡니다.
     useEffect(() => {
         const generate = async () => {
-            // 유저에게는 HTML 원본 카드가 즉시 보이므로, 로딩 지연을 느끼지 않습니다.
-            // 렌더링 안정화를 위해 모달 켜짐 애니메이션이 끝날 때까지 충분히(400ms) 기다린 후 캡처합니다.
+            setProgress(15); // 1단계: 준비 시작
             await new Promise(r => setTimeout(r, 400));
+            setProgress(45); // 2단계: 화면 캡처 시작
+            
             if (cardRef.current) {
                 try {
                     const dataUrl = await toPng(cardRef.current, { 
-                        quality: 0.95, 
-                        pixelRatio: 2, 
+                        quality: 1.0, 
+                        pixelRatio: 3, 
                         cacheBust: false,
-                        skipAutoScale: true,
-                        filter: (node) => node.tagName !== 'LINK',
+                        width: 280,
+                        // 폰트 깨짐을 방지하기 위해 LINK 태그 필터링을 제거합니다.
+                        style: {
+                            transform: 'scale(1)',
+                            transformOrigin: 'top left',
+                            WebkitTextSizeAdjust: 'none',
+                            textSizeAdjust: 'none',
+                            fontFamily: getComputedStyle(document.body).fontFamily,
+                            fontSize: '16px',
+                            margin: '0'
+                        }
                     });
-                    setGeneratedImg(dataUrl);
+                    setProgress(85); // 3단계: 파일 변환 시작
                     
                     // 공유하기 버튼 클릭 시 타임아웃을 방지하기 위해 파일 객체를 미리 만들어 둡니다.
                     const blob = await (await fetch(dataUrl)).blob();
                     setShareFile(new File([blob], `beanlog_share.png`, { type: 'image/png' }));
+                    
+                    setProgress(100); // 완료
+                    await new Promise(r => setTimeout(r, 200)); // 100% 바를 보여주기 위한 짧은 대기
+                    setGeneratedImg(dataUrl);
                 } catch (err) {
                     console.error(err);
                 } finally {
@@ -90,7 +105,10 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
         <div className="fixed inset-0 z-[120] bg-black/80 overflow-y-auto animate-in fade-in" onClick={onClose}>
             <div className="min-h-full flex flex-col items-center justify-center p-4 py-10">
                 <div className="w-full max-w-[300px] flex justify-between items-center mb-4 text-white shrink-0" onClick={e => e.stopPropagation()}>
-                    <h3 className="font-bold flex items-center gap-2"><ImageIcon size={16}/> 이미지 공유</h3>
+                    <h3 className="font-bold flex items-center gap-2">
+                        <ImageIcon size={16}/> 이미지 공유
+                        {isGenerating && <RefreshCw size={14} className="animate-spin text-white/70" />}
+                    </h3>
                     <button onClick={onClose} className="p-1 bg-white/20 rounded-full hover:bg-white/30"><X size={18}/></button>
                 </div>
 
@@ -99,7 +117,7 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                         <img src={generatedImg} className="w-[280px] rounded-3xl shadow-2xl mb-4" alt="Share Card" />
                     ) : (
                         <div className="relative w-[280px] rounded-3xl overflow-hidden shadow-2xl mb-4 shrink-0">
-                            <div ref={cardRef} className={`w-full min-h-[497px] h-fit ${bgGradient} flex flex-col`}>
+                            <div ref={cardRef} className={`w-[280px] min-h-[497px] h-fit ${bgGradient} flex flex-col`}>
                                 <div className={`relative z-10 flex flex-col pb-5 flex-1`}>
                                     <div className="flex-1 flex flex-col justify-center">
                                         <div className="relative px-5 pt-6 pb-4 mb-3 overflow-hidden">
@@ -109,13 +127,13 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                                             <div className="relative z-10">
                                                 <div className="mb-5 mt-1">
                                                     <div className="flex justify-between items-start mb-1">
-                                                        {bean.country ? <span className={`text-sm font-bold opacity-80 ${textColor}`}>{getFlagEmoji(bean.country) || '☕'} {bean.country}</span> : <span />}
+                                                        {bean.country ? <span className={`text-[14px] leading-tight font-bold opacity-80 ${textColor}`}>{getFlagEmoji(bean.country) || '☕'} {bean.country}</span> : <span />}
                                                         <div className="flex items-center gap-1.5 opacity-80">
                                                             <div className={`w-5 h-5 rounded-full flex items-center justify-center bg-[#4A2E1B] text-white`}><CustomBeanIcon size={10}/></div>
                                                             <span className={`font-black tracking-widest text-[10px] uppercase ${textColor}`}>BeanLog</span>
                                                         </div>
                                                     </div>
-                                                    <h1 className={`text-2xl font-black ${textColor} leading-tight break-keep`}>{bean.name}</h1>
+                                                    <h1 className={`text-[24px] leading-[1.2] font-black ${textColor} break-keep`}>{bean.name}</h1>
                                                 </div>
                                                 
                                                 <div className={`grid grid-cols-2 gap-x-3 gap-y-2 border-y border-black/10 py-3`}>
@@ -148,7 +166,7 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                                             )}
 
                                             {tasting && (
-                                                <div className={`bg-white/40 backdrop-blur-sm border border-white/40 rounded-lg py-1.5 px-2 shadow-sm mb-3 flex justify-between items-center w-full`}>
+                                                <div className={`bg-white/60 backdrop-blur-sm border border-white/40 rounded-lg py-1.5 px-2 shadow-sm mb-3 flex justify-between items-center w-full`}>
                                                     {Object.entries(tasting.scores).map(([key, val]) => (
                                                         <span key={key} className={`text-[9px] font-bold ${textColor} flex items-center gap-0.5`}>
                                                             <span className="opacity-60">{SCORE_LABELS_KO[key] || key}</span>
@@ -160,12 +178,12 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
 
                                             <div className="flex flex-col gap-1.5 flex-1 justify-start">
                                                 {descText && (
-                                                    <div className={`bg-white/40 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
+                                                    <div className={`bg-white/60 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
                                                         <p className={`text-[11px] font-medium leading-relaxed whitespace-pre-wrap ${textColor}`}>"{descText}"</p>
                                                     </div>
                                                 )}
                                                 {memoText && (
-                                                    <div className={`bg-black/5 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
+                                                    <div className={`bg-black/10 p-2.5 rounded-xl flex-shrink-0 backdrop-blur-sm`}>
                                                         <p className={`text-[10px] font-medium leading-snug opacity-70 whitespace-pre-wrap ${textColor}`}>{memoText}</p>
                                                     </div>
                                                 )}
@@ -183,9 +201,16 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                         </div>
                     )}
                     
-                    <p className={`text-xs font-bold mb-2 h-4 ${isGenerating ? 'text-white/60 animate-pulse' : 'text-white/80 animate-in fade-in'}`}>
-                        {isGenerating ? "이미지 최적화 중..." : "👆 이미지를 꾹 눌러서 기기에 저장하세요"}
-                    </p>
+                    <div className="flex flex-col items-center min-h-[32px] justify-center mt-1 mb-2">
+                        <p className={`text-xs font-bold ${isGenerating ? 'text-white/80' : 'text-white/80 animate-in fade-in'} ${!isGenerating && 'mt-2'}`}>
+                            {isGenerating ? `이미지 최적화 중... ${progress}%` : "👆 이미지를 꾹 눌러서 기기에 저장하세요"}
+                        </p>
+                        {isGenerating && (
+                            <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden mt-2">
+                                <div className="h-full bg-white/90 transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="w-full max-w-[280px] flex gap-3 mt-2 shrink-0" onClick={e => e.stopPropagation()}>
