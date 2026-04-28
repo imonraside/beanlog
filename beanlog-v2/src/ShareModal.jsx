@@ -39,8 +39,15 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                     });
                     setProgress(85); // 3단계: 파일 변환 시작
                     
-                    // 공유하기 버튼 클릭 시 타임아웃을 방지하기 위해 파일 객체를 미리 만들어 둡니다.
-                    const blob = await (await fetch(dataUrl)).blob();
+                    // 대용량 Data URL을 fetch 시 브라우저가 멈추는 것을 방지하기 위해 안전하게 디코딩
+                    const byteString = atob(dataUrl.split(',')[1]);
+                    const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+                    const ab = new ArrayBuffer(byteString.length);
+                    const ia = new Uint8Array(ab);
+                    for (let i = 0; i < byteString.length; i++) {
+                        ia[i] = byteString.charCodeAt(i);
+                    }
+                    const blob = new Blob([ab], { type: mimeString });
                     setShareFile(new File([blob], `beanlog_share.png`, { type: 'image/png' }));
                     
                     setProgress(100); // 완료
@@ -57,25 +64,36 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
     }, []);
 
     const handleDownload = () => {
-        if (generatedImg) {
-            const link = document.createElement('a');
-            link.download = `beanlog_${bean.name}_share.png`;
-            link.href = generatedImg;
-            link.click();
+        if (shareFile) {
+            try {
+                const objectUrl = URL.createObjectURL(shareFile);
+                const link = document.createElement('a');
+                link.download = `beanlog_${bean.name || 'bean'}_share.png`;
+                link.href = objectUrl;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 100); // 메모리 누수 방지
+            } catch (e) {
+                console.error(e);
+                alert("다운로드를 지원하지 않는 환경입니다. 이미지를 길게 눌러 저장해주세요.");
+            }
         }
     };
 
     const handleShare = async () => {
         if (shareFile) {
             try {
-                if (navigator.share && typeof navigator.canShare === 'function' && navigator.canShare({ files: [shareFile] })) {
-                    await navigator.share({ files: [shareFile], title: bean.name });
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
+                    await navigator.share({ files: [shareFile], title: bean.name || 'BeanLog', text: `${bean.name || '원두'} 정보 공유` });
                 } else {
-                    alert("이 브라우저에서는 이미지 직접 공유를 지원하지 않습니다. 다운로드를 이용해주세요.");
+                    alert("이 기기나 브라우저에서는 이미지 직접 공유를 지원하지 않습니다. 다운로드를 이용해주세요.");
                 }
             } catch (err) {
                 console.error(err);
-                alert("공유 중 오류가 발생했습니다.");
+                if (err.name !== 'AbortError') {
+                    alert("공유 중 오류가 발생했습니다. 다운로드 버튼을 이용해보세요.");
+                }
             }
         }
     };
