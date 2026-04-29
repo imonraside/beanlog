@@ -14,16 +14,22 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
 
     // 모달이 켜지면 백그라운드에서 이미지를 미리 렌더링하여 준비해 둡니다.
     useEffect(() => {
+        let interval;
         const generate = async () => {
-            setProgress(15); // 1단계: 준비 시작
-            await new Promise(r => setTimeout(r, 400));
-            setProgress(45); // 2단계: 화면 캡처 시작
+            // 부드러운 로딩 애니메이션을 위한 가짜 프로그레스 타이머
+            interval = setInterval(() => {
+                setProgress(prev => {
+                    const next = prev + (Math.floor(Math.random() * 5) + 2);
+                    return next >= 90 ? 90 : next;
+                });
+            }, 100);
             
+            await new Promise(r => setTimeout(r, 400)); // DOM 렌더링 대기
+
             if (cardRef.current) {
                 try {
                     const dataUrl = await toPng(cardRef.current, { 
-                        quality: 1.0, 
-                        pixelRatio: 3, 
+                        pixelRatio: 4, 
                         cacheBust: false,
                         width: 280,
                         // 폰트 깨짐을 방지하기 위해 LINK 태그 필터링을 제거합니다.
@@ -37,7 +43,8 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                             margin: '0'
                         }
                     });
-                    setProgress(85); // 3단계: 파일 변환 시작
+                    clearInterval(interval);
+                    setProgress(95); // 파일 변환 시작
                     
                     // 대용량 Data URL을 fetch 시 브라우저가 멈추는 것을 방지하기 위해 안전하게 디코딩
                     const byteString = atob(dataUrl.split(',')[1]);
@@ -50,17 +57,19 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                     const blob = new Blob([ab], { type: mimeString });
                     setShareFile(new File([blob], `beanlog_share.png`, { type: 'image/png' }));
                     
-                    setProgress(100); // 완료
-                    await new Promise(r => setTimeout(r, 200)); // 100% 바를 보여주기 위한 짧은 대기
+                    setProgress(100);
+                    await new Promise(r => setTimeout(r, 300)); // 100% 바를 보여주기 위한 짧은 대기
                     setGeneratedImg(dataUrl);
                 } catch (err) {
                     console.error(err);
                 } finally {
+                    clearInterval(interval);
                     setIsGenerating(false);
                 }
             }
         };
         generate();
+        return () => clearInterval(interval);
     }, []);
 
     const handleDownload = () => {
@@ -140,7 +149,7 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                                     <div className="flex-1 flex flex-col justify-center">
                                         <div className="relative px-5 pt-6 pb-4 mb-3 overflow-hidden">
                                             {bean.mainImage && (
-                                                <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-none scale-110" style={{ backgroundImage: `url("${bean.mainImage}")` }}></div>
+                                                <div className="absolute inset-0 bg-cover bg-center opacity-30 blur-none scale-100" style={{ backgroundImage: `url("${bean.mainImage}")` }}></div>
                                             )}
                                             <div className="relative z-10">
                                                 <div className="mb-5 mt-1">
@@ -225,7 +234,7 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                         </p>
                         {isGenerating && (
                             <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden mt-2">
-                                <div className="h-full bg-white/90 transition-all duration-300 ease-out" style={{ width: `${progress}%` }}></div>
+                                <div className="h-full bg-white/90 transition-all duration-500 ease-out" style={{ width: `${progress}%` }}></div>
                             </div>
                         )}
                     </div>

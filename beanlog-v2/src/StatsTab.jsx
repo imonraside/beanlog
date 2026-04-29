@@ -518,7 +518,7 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
                                             <div className={`w-10 h-10 rounded-lg bg-white dark:bg-slate-700 flex items-center justify-center shrink-0 overflow-hidden`}>{item.mainImage ? <img src={item.mainImage} className="w-full h-full object-cover"/> : <CustomBeanIcon size={20} className="text-slate-300"/>}</div>
                                             <div className="flex-1 min-w-0">
                                                 <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">{item.name}</h4>
-                                                <div className="text-xs text-slate-500 truncate">{item.shop || '-'} · {item.purchaseDate || '-'}</div>
+                                            <div className="text-xs text-slate-500 truncate">{item.shop || '-'} · {item.purchaseDate || '-'}{statDetail.title === '보유 원두 목록' && item.weight ? ` · ${item.remainingWeight !== undefined ? item.remainingWeight : (item.isFinished ? 0 : item.weight)}g` : ''}</div>
                                             </div>
                                         </>
                                     ) : (
