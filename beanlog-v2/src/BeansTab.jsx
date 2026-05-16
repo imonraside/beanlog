@@ -77,6 +77,9 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
     const [tastingMenuIdx, setTastingMenuIdx] = useState(null);
     const [showShopSuggestions, setShowShopSuggestions] = useState(false);
     const [showScorePopup, setShowScorePopup] = useState(false);
+    const [showLabelModal, setShowLabelModal] = useState(false);
+    const [labelTemplate, setLabelTemplate] = useState("[원두명]\n[구매처] [로스팅일_짧게] 15g\n[원두노트]");
+    const [labelTargetBean, setLabelTargetBean] = useState(null);
     
     const longPressTimer = useRef(null);
     const isLongPress = useRef(false);
@@ -228,6 +231,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
             if(showRandomPopup) { setShowRandomPopup(false); return; } 
             if(tastingMenuIdx !== null) { setTastingMenuIdx(null); return; } 
             if(showScorePopup) { setShowScorePopup(false); return; }
+            if(showLabelModal) { setShowLabelModal(false); return; }
             
             if (event.state && event.state.tab === TAB.BEANS) { 
                 if (event.state.view) { 
@@ -244,7 +248,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
     }, [
         active, shareData, cropImage, showFlavorPicker, showRandomPopup, tastingMenuIdx,
         beanMenuIdx, showImportInput, showAddMenu, showShopList, 
-        showAddShopModal, showScorePopup
+        showAddShopModal, showScorePopup, showLabelModal
     ]);
 
     useEffect(() => {
@@ -309,6 +313,8 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                 if (savedNoteMode) setListNoteMode(savedNoteMode); 
                 const savedSortMode = await idb.get(`${STORAGE_KEY}_sort_mode`); 
                 if (savedSortMode) setSortMode(savedSortMode); 
+                const savedLabelTemplate = await idb.get(`${STORAGE_KEY}_label_template`);
+                if (savedLabelTemplate) setLabelTemplate(savedLabelTemplate);
             } catch (e) { 
                 console.error(e); 
             } 
@@ -717,6 +723,28 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
         } 
     };
     
+    const generateLabelText = (bean, template) => {
+        if (!bean) return "";
+        let result = template;
+        const shortDate = bean.roastingDate ? bean.roastingDate.replace(/-/g, '').substring(2) : '';
+        const replacements = {
+            '\\[원두명\\]': bean.name || '',
+            '\\[구매처\\]': bean.shop || '',
+            '\\[로스팅일\\]': bean.roastingDate || '',
+            '\\[로스팅일_짧게\\]': shortDate,
+            '\\[원두노트\\]': bean.notes ? parseTags(bean.notes).join(' ') : '',
+            '\\[국가\\]': bean.country || '',
+            '\\[가공방식\\]': bean.processing || '',
+            '\\[고도\\]': bean.altitude || '',
+            '\\[품종\\]': bean.variety || '',
+            '\\[로스팅포인트\\]': bean.roastingLevel || ''
+        };
+        for (const [key, value] of Object.entries(replacements)) {
+            result = result.replace(new RegExp(key, 'g'), value);
+        }
+        return result;
+    };
+
     const sortedBeans = useMemo(() => { 
         let result = beans; 
         if (filterMode === 'BEAN') result = result.filter(b => b.weight); 
@@ -957,6 +985,57 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                 </div>
             )}
             
+            {showLabelModal && labelTargetBean && (
+                <div className="fixed inset-0 z-[70] bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl p-6 shadow-xl animate-pop flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()}>
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2"><Tag size={20} className="text-blue-500" /> 원두 라벨 만들기</h3>
+                            <button onClick={() => window.history.back()} className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"><X size={18}/></button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto space-y-4 no-scrollbar">
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">태그 추가 (터치)</label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {['[원두명]', '[구매처]', '[로스팅일]', '[로스팅일_짧게]', '[원두노트]', '[국가]', '[가공방식]', '[고도]', '[품종]', '[로스팅포인트]'].map(tag => (
+                                        <button key={tag} onClick={() => setLabelTemplate(prev => prev + tag)} className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold rounded-lg border border-blue-100 dark:border-blue-900/30 active:scale-95 transition-transform">{tag}</button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">템플릿 편집</label>
+                                <textarea 
+                                    className="w-full bg-slate-50 dark:bg-slate-800 dark:text-white p-3 rounded-xl text-sm font-medium outline-none resize-none h-24 border border-slate-100 dark:border-slate-700 focus:border-blue-300 dark:focus:border-blue-700 transition-colors" 
+                                    value={labelTemplate} 
+                                    onChange={(e) => {
+                                        setLabelTemplate(e.target.value);
+                                        idb.set(`${STORAGE_KEY}_label_template`, e.target.value);
+                                    }}
+                                />
+                            </div>
+                            
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">미리보기</label>
+                                <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl text-sm whitespace-pre-wrap font-medium dark:text-slate-300 min-h-[4rem]">
+                                    {generateLabelText(labelTargetBean, labelTemplate) || <span className="text-slate-400 italic">미리보기가 없습니다.</span>}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <button onClick={() => {
+                            const text = generateLabelText(labelTargetBean, labelTemplate);
+                            navigator.clipboard.writeText(text).then(() => {
+                                showToastMsg("라벨이 클립보드에 복사되었습니다.");
+                                window.history.back();
+                            }).catch(() => showToastMsg("복사 실패"));
+                        }} className="w-full py-4 mt-4 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-2xl font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg">
+                            <FileText size={18} /> 라벨 텍스트 복사
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {toast && <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-xl z-[70] whitespace-nowrap">{toast}</div>}
 
             {view === VIEW.LIST && (
@@ -1139,14 +1218,18 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
                                     </div>
                                     
                                     {beanMenuIdx === bean.id && (
-                                        <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
+                                        <div className="absolute inset-0 bg-slate-900/95 z-20 flex items-center justify-center gap-4 sm:gap-6 animate-in fade-in" onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
                                             <button onClick={(e) => { e.stopPropagation(); window.history.pushState({ view, id: selectedId, tab: TAB.BEANS, modal: 'SHARE' }, ''); setShareData({ bean }); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><ImageIcon size={20}/></div>
-                                                <span className="text-[10px] font-bold">이미지 공유</span>
+                                                <span className="text-[10px] font-bold">이미지</span>
                                             </button>
                                             <button onClick={(e) => { e.stopPropagation(); handleBeanTextShare(bean); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><FileText size={20}/></div>
                                                 <span className="text-[10px] font-bold">텍스트</span>
+                                            </button>
+                                            <button onClick={(e) => { e.stopPropagation(); setLabelTargetBean(bean); window.history.pushState({ view, id: selectedId, tab: TAB.BEANS, modal: 'LABEL' }, ''); setShowLabelModal(true); setBeanMenuIdx(null); }} className="flex flex-col items-center text-white gap-1">
+                                                <div className="p-2 bg-slate-800 rounded-full"><Tag size={20}/></div>
+                                                <span className="text-[10px] font-bold">라벨</span>
                                             </button>
                                             <button onClick={(e) => { e.stopPropagation(); handleAppShare(); }} className="flex flex-col items-center text-white gap-1">
                                                 <div className="p-2 bg-slate-800 rounded-full"><Share2 size={20}/></div>

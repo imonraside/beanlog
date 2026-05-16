@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { X, Download, Share2, Image as ImageIcon, RefreshCw } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import { CustomBeanIcon } from './Icons';
@@ -7,75 +7,78 @@ import { parseTags, getFlagEmoji } from './utils';
 
 export const ShareModal = ({ bean, tasting, onClose }) => {
     const cardRef = useRef(null);
-    const [isGenerating, setIsGenerating] = useState(true);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [generatedImg, setGeneratedImg] = useState(null);
     const [shareFile, setShareFile] = useState(null);
     const [progress, setProgress] = useState(0);
 
-    // 모달이 켜지면 백그라운드에서 이미지를 미리 렌더링하여 준비해 둡니다.
-    useEffect(() => {
-        let interval;
-        const generate = async () => {
-            // 부드러운 로딩 애니메이션을 위한 가짜 프로그레스 타이머
-            interval = setInterval(() => {
-                setProgress(prev => {
-                    const next = prev + (Math.floor(Math.random() * 5) + 2);
-                    return next >= 90 ? 90 : next;
-                });
-            }, 100);
-            
-            await new Promise(r => setTimeout(r, 400)); // DOM 렌더링 대기
+    const generateImage = async () => {
+        if (shareFile && generatedImg) return shareFile; // 이미 생성되었다면 재사용
+        
+        setIsGenerating(true);
+        setProgress(0);
+        
+        const interval = setInterval(() => {
+            setProgress(prev => {
+                const next = prev + (Math.floor(Math.random() * 5) + 2);
+                return next >= 90 ? 90 : next;
+            });
+        }, 100);
+        
+        await new Promise(r => setTimeout(r, 100)); // UI 업데이트 대기
 
-            if (cardRef.current) {
-                try {
-                    const dataUrl = await toPng(cardRef.current, { 
-                        pixelRatio: 4, 
-                        cacheBust: false,
-                        width: 280,
-                        // 폰트 깨짐을 방지하기 위해 LINK 태그 필터링을 제거합니다.
-                        style: {
-                            transform: 'scale(1)',
-                            transformOrigin: 'top left',
-                            WebkitTextSizeAdjust: 'none',
-                            textSizeAdjust: 'none',
-                            fontFamily: getComputedStyle(document.body).fontFamily,
-                            fontSize: '16px',
-                            margin: '0'
-                        }
-                    });
-                    clearInterval(interval);
-                    setProgress(95); // 파일 변환 시작
-                    
-                    // 대용량 Data URL을 fetch 시 브라우저가 멈추는 것을 방지하기 위해 안전하게 디코딩
-                    const byteString = atob(dataUrl.split(',')[1]);
-                    const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
-                    const ab = new ArrayBuffer(byteString.length);
-                    const ia = new Uint8Array(ab);
-                    for (let i = 0; i < byteString.length; i++) {
-                        ia[i] = byteString.charCodeAt(i);
-                    }
-                    const blob = new Blob([ab], { type: mimeString });
-                    setShareFile(new File([blob], `beanlog_share.png`, { type: 'image/png' }));
-                    
-                    setProgress(100);
-                    await new Promise(r => setTimeout(r, 300)); // 100% 바를 보여주기 위한 짧은 대기
-                    setGeneratedImg(dataUrl);
-                } catch (err) {
-                    console.error(err);
-                } finally {
-                    clearInterval(interval);
-                    setIsGenerating(false);
-                }
-            }
-        };
-        generate();
-        return () => clearInterval(interval);
-    }, []);
-
-    const handleDownload = () => {
-        if (shareFile) {
+        if (cardRef.current) {
             try {
-                const objectUrl = URL.createObjectURL(shareFile);
+                const dataUrl = await toPng(cardRef.current, { 
+                    pixelRatio: 4, 
+                    cacheBust: false,
+                    width: 280,
+                    style: {
+                        transform: 'scale(1)',
+                        transformOrigin: 'top left',
+                        WebkitTextSizeAdjust: 'none',
+                        textSizeAdjust: 'none',
+                        fontFamily: getComputedStyle(document.body).fontFamily,
+                        fontSize: '16px',
+                        margin: '0'
+                    }
+                });
+                clearInterval(interval);
+                setProgress(95);
+                
+                const byteString = atob(dataUrl.split(',')[1]);
+                const mimeString = dataUrl.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                const blob = new Blob([ab], { type: mimeString });
+                const file = new File([blob], `beanlog_share.png`, { type: 'image/png' });
+                
+                setShareFile(file);
+                setProgress(100);
+                await new Promise(r => setTimeout(r, 300));
+                setGeneratedImg(dataUrl);
+                return file;
+            } catch (err) {
+                console.error(err);
+                return null;
+            } finally {
+                clearInterval(interval);
+                setIsGenerating(false);
+            }
+        }
+        clearInterval(interval);
+        setIsGenerating(false);
+        return null;
+    };
+
+    const handleDownload = async () => {
+        const file = await generateImage();
+        if (file) {
+            try {
+                const objectUrl = URL.createObjectURL(file);
                 const link = document.createElement('a');
                 link.download = `beanlog_${bean.name || 'bean'}_share.png`;
                 link.href = objectUrl;
@@ -91,10 +94,11 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
     };
 
     const handleShare = async () => {
-        if (shareFile) {
+        const file = await generateImage();
+        if (file) {
             try {
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [shareFile] })) {
-                    await navigator.share({ files: [shareFile], title: bean.name || 'BeanLog', text: `${bean.name || '원두'} 정보 공유` });
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: bean.name || 'BeanLog', text: `${bean.name || '원두'} 정보 공유` });
                 } else {
                     alert("이 기기나 브라우저에서는 이미지 직접 공유를 지원하지 않습니다. 다운로드를 이용해주세요.");
                 }
@@ -230,7 +234,11 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                     
                     <div className="flex flex-col items-center min-h-[32px] justify-center mt-1 mb-2">
                         <p className={`text-xs font-bold ${isGenerating ? 'text-white/80' : 'text-white/80 animate-in fade-in'} ${!isGenerating && 'mt-2'}`}>
-                            {isGenerating ? `이미지 최적화 중... ${progress}%` : "👆 이미지를 꾹 눌러서 기기에 저장하세요"}
+                            {isGenerating 
+                                ? `이미지 생성 중... ${progress}%` 
+                                : generatedImg 
+                                    ? "👆 이미지를 꾹 눌러서 기기에 저장하세요" 
+                                    : "저장하거나 공유하려면 아래 버튼을 누르세요"}
                         </p>
                         {isGenerating && (
                             <div className="w-48 h-1.5 bg-white/20 rounded-full overflow-hidden mt-2">
