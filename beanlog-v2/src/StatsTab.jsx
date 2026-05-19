@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, BarChart3, CalendarDays, Clock, X, ShoppingBag, FileText, Coffee, Image as ImageIcon, LayoutDashboard, Plus, Trash2, Box } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, BarChart3, CalendarDays, Clock, X, ShoppingBag, FileText, Coffee, Image as ImageIcon, LayoutDashboard, Plus, Trash2, Box, Award } from 'lucide-react';
 import { CustomBeanIcon } from './Icons';
+import { MonthlyReport } from './MonthlyReport';
 import { ShareModal } from './ShareModal';
 import { STORAGE_KEY, TAB, INITIAL_TASTING } from './constants';
 import { idb, getDisplayScore, formatWeight, generateShareText } from './utils';
@@ -175,6 +176,7 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
     const [statDetail, setStatDetail] = useState(null);
     const [showExpenditurePopup, setShowExpenditurePopup] = useState(false);
     const [showBeanSelectPopup, setShowBeanSelectPopup] = useState(false);
+    const [showReport, setShowReport] = useState(false);
     const [shareData, setShareData] = useState(null);
     const [tastingMenuIdx, setTastingMenuIdx] = useState(null);
     const [toast, setToast] = useState(null);
@@ -188,15 +190,17 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
             if (shareData) { setShareData(null); return; }
             if (modal !== 'STAT_DETAIL' && statDetail) setStatDetail(null); 
             if (modal !== 'EXPENDITURE' && showExpenditurePopup) setShowExpenditurePopup(false); 
-            if (modal !== 'BEAN_SELECT' && showBeanSelectPopup) setShowBeanSelectPopup(false); 
-            if (modal !== 'GEAR_ADD' && showGearAddPopup) setShowGearAddPopup(false); 
+            if (modal !== 'BEAN_SELECT' && showBeanSelectPopup) setShowBeanSelectPopup(false);
+            if (modal !== 'GEAR_ADD' && showGearAddPopup) setShowGearAddPopup(false);
+            if (modal !== 'MONTHLY_REPORT' && showReport) setShowReport(false);
         };
         window.addEventListener('popstate', handlePop); return () => window.removeEventListener('popstate', handlePop);
-    }, [active, statDetail, showExpenditurePopup, showBeanSelectPopup, showGearAddPopup, shareData]);
+    }, [active, statDetail, showExpenditurePopup, showBeanSelectPopup, showGearAddPopup, shareData, showReport]);
 
     useEffect(() => { 
         if (!active) { 
             setStatDetail(null); 
+            setShowReport(false);
             setShowExpenditurePopup(false); 
             setShowBeanSelectPopup(false); 
             setShowGearAddPopup(false); 
@@ -486,6 +490,7 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
         <div className={`h-full flex flex-col bg-slate-50 dark:bg-slate-950 ${active ? 'block' : 'hidden'}`}>
             {toast && <div className="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900/90 text-white px-6 py-3 rounded-full text-xs font-bold shadow-xl z-[120] whitespace-nowrap animate-in fade-in slide-in-from-top-2">{toast}</div>}
             {shareData && <ShareModal bean={shareData.bean} tasting={shareData.tasting} onClose={() => window.history.back()} />}
+            {showReport && <MonthlyReport beans={beans} gears={gears} year={selectedYear} month={selectedMonth} onClose={() => window.history.back()} />}
             {statDetail && (
                 <div className="fixed inset-0 z-50 bg-black/50 dark:bg-black/70 flex items-center justify-center p-4 animate-in fade-in" onClick={() => window.history.back()}>
                     <div className="bg-white dark:bg-slate-900 w-full max-w-sm h-[60vh] rounded-2xl shadow-xl animate-pop flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -623,7 +628,17 @@ export const StatsTab = ({ active, onNavigateToBean, navKey }) => {
                 <section>
                     <div className="flex justify-between items-center mb-3 px-1 relative">
                         <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1"><BarChart3 size={14}/> Dashboard</h2>
-                        <DashboardFilter selectedYear={selectedYear} onSelectYear={(y) => { setSelectedYear(y); setSelectedMonth('ALL'); }} availableYears={stats.availableYears} selectedMonth={selectedMonth} onSelectMonth={setSelectedMonth} availableMonths={stats.availableMonths} />
+                        <div className="flex items-center gap-2">
+                            {selectedYear !== 'ALL' && selectedMonth !== 'ALL' && (
+                                <button 
+                                    onClick={() => { window.history.pushState({ tab: TAB.STATS, modal: 'MONTHLY_REPORT' }, ''); setShowReport(true); }}
+                                    className="bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-3 py-1.5 rounded-xl text-[11px] font-bold flex items-center gap-1.5 shadow-sm active:scale-95 transition-transform"
+                                >
+                                    <Award size={14}/> {parseInt(selectedMonth)}월 리포트
+                                </button>
+                            )}
+                            <DashboardFilter selectedYear={selectedYear} onSelectYear={(y) => { setSelectedYear(y); setSelectedMonth('ALL'); }} availableYears={stats.availableYears} selectedMonth={selectedMonth} onSelectMonth={setSelectedMonth} availableMonths={stats.availableMonths} />
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <StatCard label={`${selectedYear === 'ALL' ? '누적' : (selectedMonth === 'ALL' ? `${selectedYear}년` : `${selectedYear}.${selectedMonth}`)} 총 원두`} value={stats.totalBeans} subValue={formatWeight(stats.totalWeight)} customIcon={<CustomBeanIcon size={20} className="text-amber-700"/>} color="bg-amber-100" onClick={() => handleStatClick('TOTAL_BEANS')} />

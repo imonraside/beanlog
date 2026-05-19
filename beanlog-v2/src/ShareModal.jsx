@@ -94,6 +94,7 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
     };
 
     const handleShare = async () => {
+        const alreadyGenerated = !!(shareFile && generatedImg);
         const file = await generateImage();
         if (file) {
             try {
@@ -104,7 +105,9 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
                 }
             } catch (err) {
                 console.error(err);
-                if (err.name !== 'AbortError') {
+                if (err.name === 'NotAllowedError' && !alreadyGenerated) {
+                    alert("이미지 준비가 완료되었습니다.\n기기 보안 정책으로 인해 공유 창을 띄우려면 '공유 창 열기' 버튼을 한 번 더 눌러주세요.");
+                } else if (err.name !== 'AbortError') {
                     alert("공유 중 오류가 발생했습니다. 다운로드 버튼을 이용해보세요.");
                 }
             }
@@ -250,7 +253,7 @@ export const ShareModal = ({ bean, tasting, onClose }) => {
 
                 <div className="w-full max-w-[280px] flex gap-3 mt-2 shrink-0" onClick={e => e.stopPropagation()}>
                     <button onClick={handleDownload} disabled={isGenerating} className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors ${isGenerating ? 'bg-white/5 text-white/30 cursor-not-allowed' : 'bg-white/10 hover:bg-white/20 text-white'}`}><Download size={18}/> 기기에 저장</button>
-                    <button onClick={handleShare} disabled={isGenerating} className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors ${isGenerating ? 'bg-blue-500/50 text-white/50 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}><Share2 size={18}/> 공유하기</button>
+                    <button onClick={handleShare} disabled={isGenerating} className={`flex-1 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 transition-colors ${isGenerating ? 'bg-blue-500/50 text-white/50 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}><Share2 size={18}/> {shareFile && generatedImg ? '공유 창 열기' : '공유하기'}</button>
                 </div>
             </div>
         </div>
