@@ -124,7 +124,7 @@ export const MonthlyReport = ({ beans, gears, year, month, onClose }) => {
                 
                 const tastingsData = reportStats.topTastings.map((t, index) => ({
                     id: index,
-                    beanName: t.bean.name,
+                    beanName: t.bean?.name || '원두',
                     notes: t.notes,
                     desc: t.desc,
                     memo: t.memo
@@ -148,6 +148,7 @@ ${JSON.stringify(tastingsData)}`;
                 setAiTastingSummaries(parsed.summaries || []);
             } catch (error) {
                 console.error("AI 요약 실패:", error);
+                setAiSummary("이번 달도 향긋한 커피와 함께 ☕");
             } finally {
                 setIsAiLoading(false);
             }
@@ -159,25 +160,30 @@ ${JSON.stringify(tastingsData)}`;
     const generateImages = async () => {
         if (generatedFiles.length > 0) return generatedFiles;
         setIsGenerating(true); setProgress(0);
-        await new Promise(r => setTimeout(r, 100));
+        // UI 업데이트를 위한 충분한 대기 시간
+        await new Promise(r => setTimeout(r, 300));
 
         const files = [];
         try {
             const nodes = pagesRef.current.filter(Boolean);
             for (let i = 0; i < nodes.length; i++) {
                 const node = nodes[i];
+                // 각 페이지 생성 전 브라우저 메인 스레드에 여유를 줌
+                await new Promise(r => setTimeout(r, 200));
+                
                 const dataUrl = await toPng(node, {
-                    pixelRatio: 3, cacheBust: false, width: 320,
+                    pixelRatio: 2, // 3은 모바일에서 너무 무거우므로 2로 조정 (충분히 고화질)
+                    cacheBust: false, 
+                    width: 320,
                     style: { transform: 'scale(1)', transformOrigin: 'top left', WebkitTextSizeAdjust: 'none', margin: '0' }
                 });
                 
                 const res = await fetch(dataUrl);
                 const blob = await res.blob();
-                const file = new File([blob], `BeanLog_Report_${year}_${month}_${i+1}.png`, { type: 'image/png' });
+                const file = new File([blob], `BeanLog_${year}_${month}_${i+1}.png`, { type: 'image/png' });
                 files.push(file);
                 
                 setProgress(Math.round(((i + 1) / nodes.length) * 100));
-                await new Promise(r => setTimeout(r, 50));
             }
             
             setGeneratedFiles(files);
