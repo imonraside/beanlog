@@ -15,7 +15,7 @@ export const idb = {
 };
 
 export const migrateStorage = async () => {
-    const keys = ["BEAN_LOG_MASTER_FINAL_data", "BEAN_LOG_MASTER_FINAL_recipes", "BEAN_LOG_MASTER_FINAL_key", "BEAN_LOG_MASTER_FINAL_theme", "BEAN_LOG_MASTER_FINAL_note_mode", "BEAN_LOG_MASTER_FINAL_sort_mode"];
+    const keys = ["BEAN_LOG_MASTER_FINAL_data", "BEAN_LOG_MASTER_FINAL_recipes", "BEAN_LOG_MASTER_FINAL_gears", "BEAN_LOG_MASTER_FINAL_shops", "BEAN_LOG_MASTER_FINAL_key", "BEAN_LOG_MASTER_FINAL_theme", "BEAN_LOG_MASTER_FINAL_note_mode", "BEAN_LOG_MASTER_FINAL_sort_mode"];
     for (const k of keys) {
         const local = localStorage.getItem(k);
         if (local) { try { const parsed = JSON.parse(local); const exists = await idb.get(k); if (!exists) { await idb.set(k, parsed); } } catch {'error'} }

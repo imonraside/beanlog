@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Moon, Sun, Monitor, Sparkles, Download, Upload, Trash2, HelpCircle, RefreshCw, Smartphone, Cloud, X, Unplug } from 'lucide-react';
-import { STORAGE_KEY, RECIPE_STORAGE_KEY, APP_VERSION } from './constants';
+import { STORAGE_KEY, RECIPE_STORAGE_KEY, GEAR_STORAGE_KEY, SHOP_STORAGE_KEY, APP_VERSION } from './constants';
 import { idb } from './utils';
 
 export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, onToggleTheme, onLoadDemoData }) => {
@@ -8,6 +8,14 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
     const [isSyncing, setIsSyncing] = useState(false);
     const [backupFiles, setBackupFiles] = useState([]);
     const [showRestoreModal, setShowRestoreModal] = useState(false);
+    const [lastLocalBackup, setLastLocalBackup] = useState(null);
+
+    useEffect(() => {
+        if (active) {
+            const dateStr = localStorage.getItem(`${STORAGE_KEY}_last_local_backup_date`);
+            setLastLocalBackup(dateStr);
+        }
+    }, [active]);
 
     useEffect(() => {
         const loadGapi = () => new Promise((resolve) => {
@@ -57,7 +65,7 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
     const performDriveBackup = async (isSilent = false) => {
         if (!isSilent) { setIsSyncing(true); showToastMsg("구글 드라이브에 백업 중..."); }
         try {
-            const data = { beans: await idb.get(`${STORAGE_KEY}_data`), recipes: await idb.get(RECIPE_STORAGE_KEY), key: await idb.get(`${STORAGE_KEY}_key`) };
+            const data = { beans: await idb.get(`${STORAGE_KEY}_data`), recipes: await idb.get(RECIPE_STORAGE_KEY), gears: await idb.get(GEAR_STORAGE_KEY), shops: await idb.get(SHOP_STORAGE_KEY), key: await idb.get(`${STORAGE_KEY}_key`) };
             const file = new Blob([JSON.stringify(data)], { type: 'application/json' });
             
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -136,16 +144,29 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
             const res = await fetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`, { headers: { Authorization: `Bearer ${window.gapi.client.getToken().access_token}` } });
             if (!res.ok) throw new Error("Download failed");
             const d = await res.json();
-            if (d.beans) { await idb.set(`${STORAGE_KEY}_data`, d.beans); } if (d.recipes) { await idb.set(RECIPE_STORAGE_KEY, d.recipes); } if (d.key) { await idb.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); }
+            if (d.beans) { await idb.set(`${STORAGE_KEY}_data`, d.beans); } if (d.recipes) { await idb.set(RECIPE_STORAGE_KEY, d.recipes); } if (d.gears) { await idb.set(GEAR_STORAGE_KEY, d.gears); } if (d.shops) { await idb.set(SHOP_STORAGE_KEY, d.shops); } if (d.key) { await idb.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); }
             showToastMsg("복원 완료! 앱을 새로고침합니다."); setTimeout(() => location.reload(), 1500);
         } catch (e) { console.error(e); showToastMsg("복원에 실패했습니다."); } finally { setIsSyncing(false); }
     };
 
     if (!active && !apiKey) return null;
 
-    const backup = async () => { const data = { beans: await idb.get(`${STORAGE_KEY}_data`), recipes: await idb.get(RECIPE_STORAGE_KEY), key: await idb.get(`${STORAGE_KEY}_key`) }; const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"})); const a = document.createElement('a'); a.href=url; a.download=`beanlog_v2_backup_${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); };
-    const restore = (e) => { const f = e.target.files[0]; if (!f || !confirm("현재 데이터를 덮어씌웁니다. 진행할까요?")) return; const r = new FileReader(); r.onload = async (ev) => { try { const d = JSON.parse(ev.target.result); if (d.beans) { await idb.set(`${STORAGE_KEY}_data`, d.beans); showToastMsg("원두 데이터 복원 완료"); } if (d.recipes) { await idb.set(RECIPE_STORAGE_KEY, d.recipes); showToastMsg("레시피 데이터 복원 완료"); } if (d.key) { await idb.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); } } catch { showToastMsg("파일 오류"); } }; r.readAsText(f); };
-    const reset = async () => { if (confirm("모든 데이터가 삭제됩니다. 초기화하시겠습니까?")) { await idb.del(`${STORAGE_KEY}_data`); await idb.del(RECIPE_STORAGE_KEY); await idb.del(`${STORAGE_KEY}_key`); location.reload(); } };
+    const getBackupTimeDiffStr = () => {
+        if (!lastLocalBackup) return "(기록 없음)";
+        const now = new Date();
+        const backupDate = new Date(lastLocalBackup);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const bDay = new Date(backupDate.getFullYear(), backupDate.getMonth(), backupDate.getDate());
+        const isToday = today.getTime() === bDay.getTime();
+        if (isToday) return "(오늘)";
+        const diffTime = today - bDay;
+        const diffDaysExact = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return `(${diffDaysExact}일 전)`;
+    };
+
+    const backup = async () => { const data = { beans: await idb.get(`${STORAGE_KEY}_data`), recipes: await idb.get(RECIPE_STORAGE_KEY), gears: await idb.get(GEAR_STORAGE_KEY), shops: await idb.get(SHOP_STORAGE_KEY), key: await idb.get(`${STORAGE_KEY}_key`) }; const url = URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"})); const a = document.createElement('a'); a.href=url; a.download=`beanlog_v2_backup_${new Date().toISOString().slice(0, 10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); const nowStr = new Date().toISOString(); localStorage.setItem(`${STORAGE_KEY}_last_local_backup_date`, nowStr); setLastLocalBackup(nowStr); showToastMsg("기기 백업이 완료되었습니다."); };
+    const restore = (e) => { const f = e.target.files[0]; if (!f || !confirm("현재 데이터를 덮어씌웁니다. 진행할까요?")) return; const r = new FileReader(); r.onload = async (ev) => { try { const d = JSON.parse(ev.target.result); if (d.beans) { await idb.set(`${STORAGE_KEY}_data`, d.beans); showToastMsg("원두 데이터 복원 완료"); } if (d.recipes) { await idb.set(RECIPE_STORAGE_KEY, d.recipes); showToastMsg("레시피 데이터 복원 완료"); } if (d.gears) { await idb.set(GEAR_STORAGE_KEY, d.gears); showToastMsg("기물 데이터 복원 완료"); } if (d.shops) { await idb.set(SHOP_STORAGE_KEY, d.shops); showToastMsg("로스터리 데이터 복원 완료"); } if (d.key) { await idb.set(`${STORAGE_KEY}_key`, d.key); setApiKey(d.key); } } catch { showToastMsg("파일 오류"); } }; r.readAsText(f); };
+    const reset = async () => { if (confirm("모든 데이터가 삭제됩니다. 초기화하시겠습니까?")) { await idb.del(`${STORAGE_KEY}_data`); await idb.del(RECIPE_STORAGE_KEY); await idb.del(GEAR_STORAGE_KEY); await idb.del(SHOP_STORAGE_KEY); await idb.del(`${STORAGE_KEY}_key`); location.reload(); } };
 
     const handleInstallApp = async () => { if (window.deferredPrompt) { window.deferredPrompt.prompt(); const { outcome } = await window.deferredPrompt.userChoice; if (outcome === 'accepted') { window.deferredPrompt = null; } } else { showToastMsg("주소창의 설치 아이콘(⬇️)이나 브라우저 메뉴를 이용해주세요."); } };
 
@@ -198,7 +219,7 @@ export const SettingsTab = ({ active, apiKey, setApiKey, showToastMsg, theme, on
                         </button>
                     </div>
                     <div className="grid grid-cols-2 gap-2 mt-3">
-                        <button onClick={backup} className="py-3 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl flex items-center justify-center gap-2"><Download size={18}/> <span className="text-xs">기기 백업</span></button>
+                        <button onClick={backup} className="py-3 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl flex items-center justify-center gap-2"><Download size={18}/> <span className="text-xs">기기 백업 {getBackupTimeDiffStr()}</span></button>
                         <div className="relative"><input type="file" onChange={restore} className="hidden" id="rFile" accept=".json" /><label htmlFor="rFile" className="w-full h-full py-3 bg-slate-100 dark:bg-slate-800 font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer"><Upload size={18}/> <span className="text-xs">기기 복원</span></label></div>
                     </div>
                     <button onClick={reset} className="w-full py-4 text-red-500 font-bold bg-red-50 dark:bg-red-900/20 rounded-2xl mt-4 flex items-center justify-center gap-2"><Trash2 size={18}/> 초기화</button>

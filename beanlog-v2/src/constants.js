@@ -1,6 +1,8 @@
 export const STORAGE_KEY = "BEAN_LOG_MASTER_FINAL";
 export const RECIPE_STORAGE_KEY = `${STORAGE_KEY}_recipes`;
-export const APP_VERSION = "v1.3.5";
+export const GEAR_STORAGE_KEY = `${STORAGE_KEY}_gears`;
+export const SHOP_STORAGE_KEY = `${STORAGE_KEY}_shops`;
+export const APP_VERSION = "v1.3.6";
 export const TAB = { BEANS: 'BEANS', TIMER: 'TIMER', STATS: 'STATS', SETTINGS: 'SETTINGS' };
 
 export const INITIAL_BEAN = { id: null, name: "", country: "", region: "", variety: "", processing: "", altitude: "", roastingLevel: "", producer: "", roastingDate: "", purchaseDate: "", shop: "", purchaseUrl: "", weight: "", price: "", pricePerCup: "", notes: "", flavorDesc: "", memo: "", isFinished: false, isBlend: false, blendInfo: [], mainImage: null, ocrImage: null, tastings: [] };

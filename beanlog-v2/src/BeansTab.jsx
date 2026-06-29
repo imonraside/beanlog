@@ -13,7 +13,7 @@ import { FlavorPicker } from './FlavorPicker';
 import { ShareModal } from './ShareModal';
 import { ScoreButton, ScoreButtonPlus } from './Buttons';
 import { RadarChart } from './Charts';
-import { STORAGE_KEY, INITIAL_BEAN, INITIAL_TASTING, TAB, TASTE_ITEMS } from './constants';
+import { STORAGE_KEY, INITIAL_BEAN, INITIAL_TASTING, TAB, TASTE_ITEMS, SHOP_STORAGE_KEY } from './constants';
 import { 
     idb, getDisplayScore, getMaxScoreVal, getMaxScore, getBestTastingNote, 
     parseTags, getFlagEmoji, getRoastAge, calcPricePer100g, calcAvg, 
@@ -92,7 +92,7 @@ export const BeansTab = ({ active, globalApiKey, navProps, onNavConsumed, navKey
     const [showShopList, setShowShopList] = useState(false);
     const [showAddShopModal, setShowAddShopModal] = useState(false);
     const [newShop, setNewShop] = useState({ name: "", url: "" });
-    const SHOP_STORAGE_KEY = `${STORAGE_KEY}_shops`;
+
     
     const addBlendInfo = () => setBeanForm(prev => ({ 
         ...prev, 
